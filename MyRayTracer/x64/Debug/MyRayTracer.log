@@ -1,0 +1,7 @@
+﻿  main.cpp
+C:\Users\catar\source\repos\MyRayTracer\MyRayTracer\maths.h(69,23): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+C:\Users\catar\source\repos\MyRayTracer\MyRayTracer\color.h(42,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\catar\source\repos\MyRayTracer\MyRayTracer\color.h(41,14): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\catar\source\repos\MyRayTracer\MyRayTracer\color.h(40,28): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  MyRayTracer.vcxproj -> C:\Users\catar\source\repos\MyRayTracer\x64\Debug\MyRayTracer.exe
+  0 File(s) copied
