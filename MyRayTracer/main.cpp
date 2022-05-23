@@ -82,7 +82,7 @@ int RES_X, RES_Y;
 
 int WindowHandle = 0;
 
-
+bool SCHLICK_APPROXIMATION = false;
 
 /////////////////////////////////////////////////////////////////////// ERRORS
 
@@ -501,10 +501,11 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 				if (!shadow) {
 					L = L.normalize();
-
+					float K1 = 1.25;
+					float Katt = 1 / (K1 * (scene->getNumLights()));
 					Vector H = ((L + (ray.direction * -1))).normalize();
 					Color diff = (light->color * closest_obj->GetMaterial()->GetDiffColor()) * (N * L);
-					Color spec = (light->color * closest_obj->GetMaterial()->GetSpecColor()) * pow((H * N), closest_obj->GetMaterial()->GetShine());
+					Color spec = (light->color * closest_obj->GetMaterial()->GetSpecColor()) * pow((H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
 
 					color += (diff * closest_obj->GetMaterial()->GetDiffuse() + spec * closest_obj->GetMaterial()->GetSpecular());
 				}
@@ -517,11 +518,59 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 		if (closest_obj->GetMaterial()->GetReflection() > 0) {
 			Vector reflectedDir = ray.direction - N * 2 * (ray.direction * N);
-			Ray* rRay = &Ray(hit_point, reflectedDir);
-			rColor = rayTracing(*rRay, depth + 1, ior_1);
+			Ray reflectedRay = Ray(N * EPSILON + hit_point, reflectedDir);
+			rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 		}
+
+		Color tColor = Color();
+		float Kr;
+		
+		if (closest_obj->GetMaterial()->GetTransmittance() > 0) {
+			
+			Vector v = ray.direction * -1;
+			Vector vn = N * (v * N);
+			Vector vt = vn - v;
+			
+			float costetai = vn.length();
+			float sintetai = vt.length();
+			float sintetat = ior_1 / closest_obj->GetMaterial()->GetRefrIndex() * sintetai;
+			float costetat = sqrt(1 - pow(sintetat, 2));
+
+			Vector t = vt.normalize();
+			Vector rt = t * sintetat - N * costetat;
+			Ray refractedRay = Ray(N * EPSILON + hit_point, rt);
+			
+			float ior_t = closest_obj->GetMaterial()->GetRefrIndex();
+			tColor = rayTracing(refractedRay, depth + 1, ior_t);
+
+			if (!SCHLICK_APPROXIMATION) {
+				// Fresnel equations - perpendicular polarised light
+				float RperD = (ior_1 * costetai - ior_t * costetat) / (ior_1 * costetai + ior_t * costetat);
+				float Rper = pow(fabs(RperD), 2);
+				// Fresnel equations - parallel polarised light 
+				float RparD = (ior_1 * costetat - ior_t * costetai) / (ior_1 * costetat + ior_t * costetai);
+				float Rpar = pow(fabs(RparD), 2);
+
+				Kr = (1 / 2) * (Rper + Rpar);
+			}
+			else {
+				float R0_aux = (ior_1 - ior_t) / (ior_1 + ior_t);
+				float R0 = pow(R0_aux, 2);
+				if(I * N > 0)
+					Kr = R0 + (1 - R0) * pow(1 - costetai, 5);
+				else
+					Kr = R0 + (1 - R0) * pow(1 - costetat, 5);
+			}
+		}
+
+		else {
+			Kr = closest_obj->GetMaterial()->GetSpecular();
+		}
+
+		color += rColor * Kr * closest_obj->GetMaterial()->GetSpecColor() + tColor * (1 - Kr);
+
+		return color;
 	}
-	return color;
 }
 
 

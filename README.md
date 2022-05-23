@@ -2,7 +2,7 @@
 
 # P3D_21-22
 
-3D Programmin 2021/2022
+3D Programming 2021/2022
 
 #### Group
 - [Catarina Sousa](https://github.com/catasofia)
