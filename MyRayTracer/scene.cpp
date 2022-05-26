@@ -12,7 +12,14 @@ Triangle::Triangle(Vector& P0, Vector& P1, Vector& P2)
 	points[0] = P0; points[1] = P1; points[2] = P2;
 
 	/* Calculate the normal */
+	Vector V = P1 - P0;
+	Vector W = P2 - P0;
+
 	normal = Vector(0, 0, 0);
+	normal.x = (V.y * W.z) - (V.z * W.y);
+	normal.y = (V.z * W.x) - (V.x * W.z);
+	normal.z = (V.x * W.y) - (V.y * W.x);
+
 	normal.normalize();
 
 	//YOUR CODE to Calculate the Min and Max for bounding box
@@ -40,8 +47,52 @@ Vector Triangle::getNormal(Vector point)
 
 bool Triangle::intercepts(Ray& r, float& t ) {
 
-	//PUT HERE YOUR CODE
-	return (false);
+	// https://www.youtube.com/watch?v=fK1RPmF_zjQ 
+
+	Vector vert0 = points[0], vert1 = points[1], vert2 = points[2];
+
+	// get edges of the triangle (sharing v0)
+	Vector edge1 = vert1 - vert0;
+	Vector edge2 = vert2 - vert0;
+
+	// a x b = i (a2 b3 – a3 b2) + j (a3 b1 – a1 b3) + k (a1 b2 – a2 b1)
+	// cross product ray direction with edge2
+	Vector cross_rayDir_edge2 = Vector(0, 0, 0);
+	cross_rayDir_edge2.x = (r.direction.y * edge2.z) - (r.direction.z * edge2.y);
+	cross_rayDir_edge2.y = (r.direction.z * edge2.x) - (r.direction.x * edge2.z);
+	cross_rayDir_edge2.z = (r.direction.x * edge2.y) - (r.direction.y * edge2.x);
+
+	//determinante (dot product do vector obtido c edge1)
+	float det = edge1 * cross_rayDir_edge2;
+
+	if (det > -0.0000001f && det < 0.0000001f) return false; //ray is parallel with triangle (n podemos dividir por 0)
+
+	float inv_det = 1.0f / det;
+
+	// distance from ray origin to v0 (t)
+	Vector orig_minus_vert0 = r.origin - vert0;
+
+	//calculate baryU
+	float u = inv_det * (orig_minus_vert0 * cross_rayDir_edge2);
+	// check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within)
+	if (u < 0.0f || u > 1.0f) return false;
+
+	// a x b = i (a2 b3 – a3 b2) + j (a3 b1 – a1 b3) + k (a1 b2 – a2 b1)
+	// cross product 
+	Vector cross_origMinusVert0_edge1 = Vector(0, 0, 0);
+	cross_origMinusVert0_edge1.x = (orig_minus_vert0.y * edge1.z) - (orig_minus_vert0.z * edge1.y);
+	cross_origMinusVert0_edge1.y = (orig_minus_vert0.z * edge1.x) - (orig_minus_vert0.x * edge1.z);
+	cross_origMinusVert0_edge1.z = (orig_minus_vert0.x * edge1.y) - (orig_minus_vert0.y * edge1.x);
+
+	//calculate baryV
+	float v = inv_det * (r.direction * cross_origMinusVert0_edge1);
+	// check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within) 
+	if (v < 0.0f || u + v > 1.0f) return false;
+
+	t = inv_det * (edge2 * cross_origMinusVert0_edge1);
+	if (t > 0.0000001f) return true;
+
+	return false;
 }
 
 Plane::Plane(Vector& a_PN, float a_D)
