@@ -29,6 +29,10 @@ bool drawModeEnabled = true;
 
 bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 
+bool soft_shadows = true;
+bool antialiasing = false;
+float nr_lights = 4;
+
 #define MAX_DEPTH 4  //number of bounces
 
 #define CAPTION "Whitted Ray-Tracer"
@@ -453,6 +457,32 @@ void setupGLUT(int argc, char* argv[])
 
 
 /////////////////////////////////////////////////////YOUR CODE HERE///////////////////////////////////////////////////////////////////////////////////////
+void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* closest_obj, Ray ray, Color& l_color, Color& color) {
+	float cur_dist = FLT_MAX;
+
+	if (L * N > 0) {
+		bool shadow = false;
+		Ray newray = Ray(N * EPSILON + hit_point, L);
+		for (int o = 0; o < scene->getNumObjects(); o++) {
+			obj = scene->getObject(o);
+			if (obj->intercepts(newray, cur_dist)) {
+				shadow = true;
+				break;
+			}
+		}
+
+		if (!shadow) {
+			L = L.normalize();
+			float K1 = 1.25;
+			float Katt = 1 / (K1 * (scene->getNumLights()));
+			Vector H = ((L + (ray.direction * -1))).normalize();
+			Color diff = (l_color * closest_obj->GetMaterial()->GetDiffColor()) * (N * L);
+			Color spec = (l_color * closest_obj->GetMaterial()->GetSpecColor()) * pow((H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
+
+			color += diff * closest_obj->GetMaterial()->GetDiffuse() + spec * closest_obj->GetMaterial()->GetSpecular();
+		}
+	}
+}
 
 Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medium 1 where the ray is travelling
 {
@@ -489,27 +519,43 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 			light = scene->getLight(l);
 			Vector L = (light->position - hit_point).normalize();
 
-			if (L * N > 0) {
-				bool shadow = false;
-				Ray newray = Ray(N * EPSILON + hit_point, L);
-				for (int o = 0; o < scene->getNumObjects(); o++) {
-					obj = scene->getObject(o);
-					if (obj->intercepts(newray, cur_dist)) {
-						shadow = true;
-						break;
+			//extent of the grid 
+			float ext = 0.5f;
+
+			if (soft_shadows) {
+				if (!antialiasing) {
+					//For each light put there many lights aroun with 0.5f*0.5f extent around the center
+					// Divide intensity, because each ray as the nth of the intensity of the original 
+					Color intensity = light->color * (1.0f / (nr_lights * nr_lights));
+
+					//divide each extent by the number of lights to have the distance between each different light
+					float dist = ext / nr_lights; 
+
+					//first position to start applying the lights (-0.25 to start at beggining instead of center)
+					float x = light->position.x - 0.25f;
+					float y = light->position.y - 0.25f;
+
+					//iterate the light grid, that has 0.5f of extent, so each iteratioin increases ext/nr_lights
+					for (; y < light->position.y + 0.25f; y += dist) {
+						for (; x < light->position.x + 0.25f; x +=dist) {
+
+							//get position of the light, z is the same as the "original", we assume the same "height"
+							Vector position = Vector(x, y, light->position.z);
+
+							Vector L = (position - hit_point).normalize();
+
+							applyLights(L, N, hit_point, obj, closest_obj, ray, intensity, color);
+						}
+						//starts from the beggining of the line
+						x = light->position.x - 0.25f;
 					}
 				}
-
-				if (!shadow) {
-					L = L.normalize();
-					float K1 = 1.25;
-					float Katt = 1 / (K1 * (scene->getNumLights()));
-					Vector H = ((L + (ray.direction * -1))).normalize();
-					Color diff = (light->color * closest_obj->GetMaterial()->GetDiffColor()) * (N * L);
-					Color spec = (light->color * closest_obj->GetMaterial()->GetSpecColor()) * pow((H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
-
-					color += (diff * closest_obj->GetMaterial()->GetDiffuse() + spec * closest_obj->GetMaterial()->GetSpecular());
+				else {
+					//with antialiasing
 				}
+			}
+			else {
+				applyLights(L, N, hit_point, obj, closest_obj, ray, light->color, color);
 			}
 		}
 
@@ -580,7 +626,6 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 	}
 }
 
-
 // Render function by primary ray casting from the eye towards the scene's objects
 
 void renderScene()
@@ -604,7 +649,7 @@ void renderScene()
 			pixel.x = x + 0.5f;
 			pixel.y = y + 0.5f;
 
-			Ray *ray;
+			Ray* ray;
 
 			if (DEPTH_OF_FIELD) {
 				Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
@@ -615,7 +660,7 @@ void renderScene()
 			}
 
 			color = rayTracing(*ray, 1, 1.0).clamp();
-			
+
 			img_Data[counter++] = u8fromfloat((float)color.r());
 			img_Data[counter++] = u8fromfloat((float)color.g());
 			img_Data[counter++] = u8fromfloat((float)color.b());
