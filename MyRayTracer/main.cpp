@@ -83,6 +83,7 @@ int RES_X, RES_Y;
 int WindowHandle = 0;
 
 bool SCHLICK_APPROXIMATION = false;
+bool DEPTH_OF_FIELD = true;
 
 /////////////////////////////////////////////////////////////////////// ERRORS
 
@@ -603,9 +604,17 @@ void renderScene()
 			pixel.x = x + 0.5f;
 			pixel.y = y + 0.5f;
 
-			Ray ray = scene->GetCamera()->PrimaryRay(pixel);   //function from camera.h
+			Ray *ray;
 
-			color = rayTracing(ray, 1, 1.0).clamp();
+			if (DEPTH_OF_FIELD) {
+				Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
+				ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+			}
+			else {
+				ray = &scene->GetCamera()->PrimaryRay(pixel);   //function from camera.h
+			}
+
+			color = rayTracing(*ray, 1, 1.0).clamp();
 			
 			img_Data[counter++] = u8fromfloat((float)color.r());
 			img_Data[counter++] = u8fromfloat((float)color.g());
