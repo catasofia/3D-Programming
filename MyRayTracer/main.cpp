@@ -91,6 +91,8 @@ int WindowHandle = 0;
 
 bool SCHLICK_APPROXIMATION = false;
 bool DEPTH_OF_FIELD = true;
+bool FUZZY_REFLECTIONS = true;
+float roughness = 0.2f;
 
 /////////////////////////////////////////////////////////////////////// ERRORS
 
@@ -593,7 +595,16 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		if (closest_obj->GetMaterial()->GetReflection() > 0) {
 			Vector reflectedDir = ray.direction - N * 2 * (ray.direction * N);
 			Ray reflectedRay = Ray(hit_point + N * EPSILON, reflectedDir);
-			rColor = rayTracing(reflectedRay, depth + 1, ior_1);
+			
+			if (FUZZY_REFLECTIONS) {
+		
+				reflectedRay.direction = (reflectedDir + rnd_unit_sphere() * roughness).normalize();
+				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
+
+			}
+			else {
+				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
+			}
 		}
 
 		Color tColor = Color();
