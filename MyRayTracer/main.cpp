@@ -1,7 +1,7 @@
- ///////////////////////////////////////////////////////////////////////
+ï»¿///////////////////////////////////////////////////////////////////////
 //
 // P3D Course
-// (c) 2021 by João Madeiras Pereira
+// (c) 2021 by Joï¿½o Madeiras Pereira
 //Ray Tracing P3F scenes and drawing points with Modern OpenGL
 //
 ///////////////////////////////////////////////////////////////////////
@@ -32,6 +32,7 @@ bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 bool soft_shadows = true;
 bool antialiasing = false;
 float nr_lights = 4;
+float spp = 4;
 
 #define MAX_DEPTH 4  //number of bounces
 
@@ -60,13 +61,13 @@ char s[32];
 
 
 // Points defined by 2 attributes: positions which are stored in vertices array and colors which are stored in colors array
-float *colors;
-float *vertices;
+float* colors;
+float* vertices;
 int size_vertices;
 int size_colors;
 
 //Array of Pixels to be stored in a file by using DevIL library
-uint8_t *img_Data;
+uint8_t* img_Data;
 
 GLfloat m[16];  //projection matrix initialized by ortho function
 
@@ -94,7 +95,7 @@ bool DEPTH_OF_FIELD = true;
 bool isOpenGLError() {
 	bool isError = false;
 	GLenum errCode;
-	const GLubyte *errString;
+	const GLubyte* errString;
 	while ((errCode = glGetError()) != GL_NO_ERROR) {
 		isError = true;
 		errString = gluErrorString(errCode);
@@ -105,7 +106,7 @@ bool isOpenGLError() {
 
 void checkOpenGLError(std::string error)
 {
-	if(isOpenGLError()) {
+	if (isOpenGLError()) {
 		std::cerr << error << std::endl;
 		exit(EXIT_FAILURE);
 	}
@@ -160,7 +161,7 @@ void createShaderProgram()
 
 	glBindAttribLocation(ProgramId, VERTEX_COORD_ATTRIB, "in_Position");
 	glBindAttribLocation(ProgramId, COLOR_ATTRIB, "in_Color");
-	
+
 	glLinkProgram(ProgramId);
 	UniformId = glGetUniformLocation(ProgramId, "Matrix");
 
@@ -189,22 +190,22 @@ void createBufferObjects()
 	glGenBuffers(2, VboId);
 	glBindBuffer(GL_ARRAY_BUFFER, VboId[0]);
 
-	/* Só se faz a alocação dos arrays glBufferData (NULL), e o envio dos pontos para a placa gráfica
-	é feito na drawPoints com GlBufferSubData em tempo de execução pois os arrays são GL_DYNAMIC_DRAW */
+	/* Sï¿½ se faz a alocaï¿½ï¿½o dos arrays glBufferData (NULL), e o envio dos pontos para a placa grï¿½fica
+	ï¿½ feito na drawPoints com GlBufferSubData em tempo de execuï¿½ï¿½o pois os arrays sï¿½o GL_DYNAMIC_DRAW */
 	glBufferData(GL_ARRAY_BUFFER, size_vertices, NULL, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(VERTEX_COORD_ATTRIB);
 	glVertexAttribPointer(VERTEX_COORD_ATTRIB, 2, GL_FLOAT, 0, 0, 0);
-	
+
 	glBindBuffer(GL_ARRAY_BUFFER, VboId[1]);
 	glBufferData(GL_ARRAY_BUFFER, size_colors, NULL, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(COLOR_ATTRIB);
 	glVertexAttribPointer(COLOR_ATTRIB, 3, GL_FLOAT, 0, 0, 0);
-	
-// unbind the VAO
+
+	// unbind the VAO
 	glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-//	glDisableVertexAttribArray(VERTEX_COORD_ATTRIB); 
-//	glDisableVertexAttribArray(COLOR_ATTRIB);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//	glDisableVertexAttribArray(VERTEX_COORD_ATTRIB); 
+	//	glDisableVertexAttribArray(COLOR_ATTRIB);
 	checkOpenGLError("ERROR: Could not create VAOs and VBOs.");
 }
 
@@ -212,7 +213,7 @@ void destroyBufferObjects()
 {
 	glDisableVertexAttribArray(VERTEX_COORD_ATTRIB);
 	glDisableVertexAttribArray(COLOR_ATTRIB);
-	
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
@@ -235,7 +236,7 @@ void drawPoints()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, size_colors, colors);
 
 	glUniformMatrix4fv(UniformId, 1, GL_FALSE, m);
-	glDrawArrays(GL_POINTS, 0, RES_X*RES_Y);
+	glDrawArrays(GL_POINTS, 0, RES_X * RES_Y);
 	glFinish();
 
 	glUseProgram(0);
@@ -245,7 +246,7 @@ void drawPoints()
 	checkOpenGLError("ERROR: Could not draw scene.");
 }
 
-ILuint saveImgFile(const char *filename) {
+ILuint saveImgFile(const char* filename) {
 	ILuint ImageId;
 
 	ilEnable(IL_FILE_OVERWRITE);
@@ -283,8 +284,8 @@ void cleanup()
 	destroyBufferObjects();
 }
 
-void ortho(float left, float right, float bottom, float top, 
-			float nearp, float farp)
+void ortho(float left, float right, float bottom, float top,
+	float nearp, float farp)
 {
 	m[0 * 4 + 0] = 2 / (right - left);
 	m[0 * 4 + 1] = 0.0;
@@ -306,7 +307,7 @@ void ortho(float left, float right, float bottom, float top,
 
 void reshape(int w, int h)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, w, h);
 	ortho(0, (float)RES_X, 0, (float)RES_Y, -1.0, 1.0);
 }
@@ -315,23 +316,23 @@ void processKeys(unsigned char key, int xx, int yy)
 {
 	switch (key) {
 
-		case 27:
-			glutLeaveMainLoop();
-			break;
+	case 27:
+		glutLeaveMainLoop();
+		break;
 
-		case 'r':
-			camX = Eye.x;
-			camY = Eye.y;
-			camZ = Eye.z;
-			r = Eye.length();
-			beta = asinf(camY / r) * 180.0f / 3.14f;
-			alpha = atanf(camX / camZ) * 180.0f / 3.14f;
-			break;
+	case 'r':
+		camX = Eye.x;
+		camY = Eye.y;
+		camZ = Eye.z;
+		r = Eye.length();
+		beta = asinf(camY / r) * 180.0f / 3.14f;
+		alpha = atanf(camX / camZ) * 180.0f / 3.14f;
+		break;
 
-		case 'c':
-			printf("Camera Spherical Coordinates (%f, %f, %f)\n", r, beta, alpha);
-			printf("Camera Cartesian Coordinates (%f, %f, %f)\n", camX, camY, camZ);
-			break;
+	case 'c':
+		printf("Camera Spherical Coordinates (%f, %f, %f)\n", r, beta, alpha);
+		printf("Camera Cartesian Coordinates (%f, %f, %f)\n", camX, camY, camZ);
+		break;
 	}
 }
 
@@ -422,34 +423,34 @@ void mouseWheel(int wheel, int direction, int x, int y) {
 
 void setupGLEW() {
 	glewExperimental = GL_TRUE;
-	GLenum result = glewInit() ; 
-	if (result != GLEW_OK) { 
+	GLenum result = glewInit();
+	if (result != GLEW_OK) {
 		std::cerr << "ERROR glewInit: " << glewGetString(result) << std::endl;
 		exit(EXIT_FAILURE);
-	} 
+	}
 	GLenum err_code = glGetError();
-	printf ("Vendor: %s\n", glGetString (GL_VENDOR));
-	printf ("Renderer: %s\n", glGetString (GL_RENDERER));
-	printf ("Version: %s\n", glGetString (GL_VERSION));
-	printf ("GLSL: %s\n", glGetString (GL_SHADING_LANGUAGE_VERSION));
+	printf("Vendor: %s\n", glGetString(GL_VENDOR));
+	printf("Renderer: %s\n", glGetString(GL_RENDERER));
+	printf("Version: %s\n", glGetString(GL_VERSION));
+	printf("GLSL: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 }
 
 void setupGLUT(int argc, char* argv[])
 {
 	glutInit(&argc, argv);
-	
+
 	glutInitContextVersion(4, 3);
 	glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 
-	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS);
-	
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+
 	glutInitWindowPosition(100, 250);
 	glutInitWindowSize(RES_X, RES_Y);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glDisable(GL_DEPTH_TEST);
 	WindowHandle = glutCreateWindow(CAPTION);
-	if(WindowHandle < 1) {
+	if (WindowHandle < 1) {
 		std::cerr << "ERROR: Could not create a new rendering window." << std::endl;
 		exit(EXIT_FAILURE);
 	}
@@ -506,15 +507,15 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 	if (closest_obj == NULL) {
 		return scene->GetBackgroundColor();
 	}
-	
-	else{
+
+	else {
 		hit_point = ray.origin + ray.direction * min_dist;
 		Vector N = (closest_obj->getNormal(hit_point)).normalize();
 		Vector I = (ray.direction * (-1));
 		Light* light = NULL;
 		Vector L;
 		cur_dist = FLT_MAX;
-		
+
 		for (int l = 0; l < scene->getNumLights(); l++) {
 			light = scene->getLight(l);
 			Vector L = (light->position - hit_point).normalize();
@@ -529,7 +530,7 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 					Color intensity = light->color * (1.0f / (nr_lights * nr_lights));
 
 					//divide each extent by the number of lights to have the distance between each different light
-					float dist = ext / nr_lights; 
+					float dist = ext / nr_lights;
 
 					//first position to start applying the lights (-0.25 to start at beggining instead of center)
 					float x = light->position.x - 0.25f;
@@ -537,7 +538,7 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 					//iterate the light grid, that has 0.5f of extent, so each iteratioin increases ext/nr_lights
 					for (; y < light->position.y + 0.25f; y += dist) {
-						for (; x < light->position.x + 0.25f; x +=dist) {
+						for (; x < light->position.x + 0.25f; x += dist) {
 
 							//get position of the light, z is the same as the "original", we assume the same "height"
 							Vector position = Vector(x, y, light->position.z);
@@ -552,6 +553,14 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				}
 				else {
 					//with antialiasing
+					Vector position = Vector(
+						light->position.x + ((light->position.x + rand_float()) / spp), //light->position.x + ext * ((light->position.x + rand_float()) / spp)
+						light->position.y + ((light->position.y + rand_float()) / spp),
+						light->position.z);
+
+					Vector L = (position - hit_point).normalize();
+
+					applyLights(L, N, hit_point, obj, closest_obj, ray, light->color, color);
 				}
 			}
 			else {
@@ -578,15 +587,15 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		float Kr = 1;
 
 		if (closest_obj->GetMaterial()->GetTransmittance() > 0) {
-			
+
 			float ior_t = 1;
 			if (!outside) ior_t = 1;
 			else ior_t = closest_obj->GetMaterial()->GetRefrIndex();
-			
+
 			Vector v = ray.direction * -1;
 			Vector vn = N * (v * N);
 			Vector vt = vn - v;
-			
+
 			float costetai = vn.length();
 			float sintetai = vt.length();
 			float sintetat = (ior_1 / ior_t) * sintetai;
@@ -646,20 +655,42 @@ void renderScene()
 			Color color;
 
 			Vector pixel;  //viewport coordinates
-			pixel.x = x + 0.5f;
-			pixel.y = y + 0.5f;
+			if (!antialiasing) {
+				pixel.x = x + 0.5f;
+				pixel.y = y + 0.5f;
 
-			Ray* ray;
+				Ray* ray;
 
-			if (DEPTH_OF_FIELD) {
-				Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
-				ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+				if (DEPTH_OF_FIELD) {
+					Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
+					ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+				}
+				else {
+					ray = &scene->GetCamera()->PrimaryRay(pixel);   //function from camera.h
+				}
+				color = rayTracing(*ray, 1, 1.0).clamp();
 			}
 			else {
-				ray = &scene->GetCamera()->PrimaryRay(pixel);   //function from camera.h
-			}
+				for (int p = 0; p < spp; p++) {
+					for (int q = 0; q < spp; q++) {
+						pixel.x = x + (p + rand_float()) / spp;
+						pixel.y = y + (q + rand_float()) / spp;
 
-			color = rayTracing(*ray, 1, 1.0).clamp();
+						Ray* ray;
+
+						if (DEPTH_OF_FIELD) {
+							Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
+							ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+						}
+						else {
+							ray = &scene->GetCamera()->PrimaryRay(pixel);  //function from camera.h
+						}
+						color += rayTracing(*ray, 1, 1.0).clamp();
+					}
+				}
+
+				color = color * (1.0f / (spp * spp));
+			}
 
 			img_Data[counter++] = u8fromfloat((float)color.r());
 			img_Data[counter++] = u8fromfloat((float)color.g());
@@ -766,7 +797,7 @@ void init_scene(void)
 	printf("\nResolutionX = %d  ResolutionY= %d.\n", RES_X, RES_Y);
 
 	// Pixel buffer to be used in the Save Image function
-	img_Data = (uint8_t*)malloc(3 * RES_X*RES_Y * sizeof(uint8_t));
+	img_Data = (uint8_t*)malloc(3 * RES_X * RES_Y * sizeof(uint8_t));
 	if (img_Data == NULL) exit(1);
 
 	Accel_Struct = scene->GetAccelStruct();   //Type of acceleration data structure
@@ -814,7 +845,7 @@ int main(int argc, char* argv[])
 	}
 	ilInit();
 
-	int 
+	int
 		ch;
 	if (!drawModeEnabled) {
 
@@ -831,14 +862,14 @@ int main(int argc, char* argv[])
 			delete(scene);
 			free(img_Data);
 			ch = _getch();
-		} while((toupper(ch) == 'Y')) ;
+		} while ((toupper(ch) == 'Y'));
 	}
 
 	else {   //Use OpenGL to draw image in the screen
 		printf("OPENGL DRAWING MODE\n\n");
 		init_scene();
-		size_vertices = 2 * RES_X*RES_Y * sizeof(float);
-		size_colors = 3 * RES_X*RES_Y * sizeof(float);
+		size_vertices = 2 * RES_X * RES_Y * sizeof(float);
+		size_colors = 3 * RES_X * RES_Y * sizeof(float);
 		vertices = (float*)malloc(size_vertices);
 		if (vertices == NULL) exit(1);
 		colors = (float*)malloc(size_colors);
