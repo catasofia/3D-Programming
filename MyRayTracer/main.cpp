@@ -29,8 +29,10 @@ bool drawModeEnabled = true;
 
 bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 
+int init_x;
+int init_y;
 bool soft_shadows = true;
-bool antialiasing = false;
+bool antialiasing = true;
 float nr_lights = 4;
 float spp = 4;
 
@@ -472,6 +474,11 @@ void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* clos
 			}
 		}
 
+		if (Accel_Struct == GRID_ACC) {
+			if (grid_ptr->Traverse(newray))
+				shadow = true;
+		}
+
 		if (!shadow) {
 			L = L.normalize();
 			float K1 = 1.25;
@@ -495,12 +502,19 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 	Vector hit_point;
 
-	for (int i = 0; i < scene->getNumObjects(); i++) {
-		obj = scene->getObject(i);
+	if (Accel_Struct == GRID_ACC) {
+		grid_ptr->Traverse(ray, &closest_obj, hit_point);
+	}
 
-		if (obj->intercepts(ray, cur_dist) && (cur_dist < min_dist)) {
-			closest_obj = obj;
-			min_dist = cur_dist;
+	else {
+		for (int i = 0; i < scene->getNumObjects(); i++) {
+			obj = scene->getObject(i);
+
+			if (obj->intercepts(ray, cur_dist) && (cur_dist < min_dist)) {
+				closest_obj = obj;
+				min_dist = cur_dist;
+				hit_point = ray.origin + ray.direction * min_dist;
+			}
 		}
 	}
 
@@ -509,7 +523,6 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 	}
 
 	else {
-		hit_point = ray.origin + ray.direction * min_dist;
 		Vector N = (closest_obj->getNormal(hit_point)).normalize();
 		Vector I = (ray.direction * (-1));
 		Light* light = NULL;
@@ -554,8 +567,8 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				else {
 					//with antialiasing
 					Vector position = Vector(
-						light->position.x + ((light->position.x + rand_float()) / spp), //light->position.x + ext * ((light->position.x + rand_float()) / spp)
-						light->position.y + ((light->position.y + rand_float()) / spp),
+						light->position.x + (ext * ((init_x + rand_float()) / spp)), //light->position.x + ext * ((light->position.x + rand_float()) / spp)
+						light->position.y + (ext * ((init_y + rand_float()) / spp)),
 						light->position.z);
 
 					Vector L = (position - hit_point).normalize();
@@ -677,6 +690,9 @@ void renderScene()
 						pixel.y = y + (q + rand_float()) / spp;
 
 						Ray* ray;
+
+						init_x = p;
+						init_y = q;
 
 						if (DEPTH_OF_FIELD) {
 							Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
@@ -800,7 +816,7 @@ void init_scene(void)
 	img_Data = (uint8_t*)malloc(3 * RES_X * RES_Y * sizeof(uint8_t));
 	if (img_Data == NULL) exit(1);
 
-	Accel_Struct = scene->GetAccelStruct();   //Type of acceleration data structure
+	//Accel_Struct = scene->GetAccelStruct();   //Type of acceleration data structure
 
 	if (Accel_Struct == GRID_ACC) {
 		grid_ptr = new Grid();
