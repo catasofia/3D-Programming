@@ -32,7 +32,7 @@ bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 int init_x;
 int init_y;
 bool soft_shadows = true;
-bool antialiasing = true;
+bool antialiasing = false;
 float nr_lights = 4;
 float spp = 4;
 
@@ -83,15 +83,15 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = NONE;
+accelerator Accel_Struct = GRID_ACC;
 
 int RES_X, RES_Y;
 
 int WindowHandle = 0;
 
 bool SCHLICK_APPROXIMATION = false;
-bool DEPTH_OF_FIELD = true;
-bool FUZZY_REFLECTIONS = true;
+bool DEPTH_OF_FIELD = false;
+bool FUZZY_REFLECTIONS = false;
 float roughness = 0.2f;
 
 /////////////////////////////////////////////////////////////////////// ERRORS
@@ -115,7 +115,6 @@ void checkOpenGLError(std::string error)
 		exit(EXIT_FAILURE);
 	}
 }
-
 /////////////////////////////////////////////////////////////////////// SHADERs
 
 const GLchar* VertexShader =
@@ -468,18 +467,20 @@ void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* clos
 	if (L * N > 0) {
 		bool shadow = false;
 		Ray newray = Ray(N * EPSILON + hit_point, L);
-		for (int o = 0; o < scene->getNumObjects(); o++) {
-			obj = scene->getObject(o);
-			if (obj->intercepts(newray, cur_dist)) {
-				shadow = true;
-				break;
-			}
-		}
-
 		if (Accel_Struct == GRID_ACC) {
 			if (grid_ptr->Traverse(newray))
 				shadow = true;
 		}
+		else {
+			for (int o = 0; o < scene->getNumObjects(); o++) {
+				obj = scene->getObject(o);
+				if (obj->intercepts(newray, cur_dist)) {
+					shadow = true;
+					break;
+				}
+			}
+		}
+
 
 		if (!shadow) {
 			L = L.normalize();
@@ -606,6 +607,7 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 			}
 		}
+
 
 		Color tColor = Color();
 		float Kr = 1;
