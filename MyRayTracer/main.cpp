@@ -31,7 +31,7 @@ bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 
 int init_x;
 int init_y;
-bool soft_shadows = true;
+bool soft_shadows = false;
 bool antialiasing = false;
 float nr_lights = 4;
 float spp = 4;
@@ -83,7 +83,7 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = GRID_ACC;
+accelerator Accel_Struct = NONE;
 
 int RES_X, RES_Y;
 
@@ -598,11 +598,10 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 			Ray reflectedRay = Ray(hit_point + N * EPSILON, reflectedDir);
 			
 			if (FUZZY_REFLECTIONS) {
-		
 				reflectedRay.direction = (reflectedDir + rnd_unit_sphere() * roughness).normalize();
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
-
 			}
+
 			else {
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 			}
@@ -655,7 +654,9 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		}
 		else Kr = closest_obj->GetMaterial()->GetSpecular();
 
-		color += rColor * Kr * closest_obj->GetMaterial()->GetSpecColor() + tColor * (1 - Kr);
+		color += tColor * (1 - Kr) * closest_obj->GetMaterial()->GetDiffColor();
+		if (Kr > 0)
+			color += rColor * Kr * closest_obj->GetMaterial()->GetSpecColor();
 
 		return color.clamp();
 	}
