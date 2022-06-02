@@ -140,6 +140,24 @@ private:
 	Vector Normal;
 };
 
+class MovingSphere : public Object {
+	public:
+		MovingSphere() {}
+		MovingSphere(Vector& a_center, Vector& b_center, float a_radius, float t0, float t1) :
+		center0(a_center), center1(b_center), SqRadius(a_radius* a_radius),
+			radius(a_radius), time0(t0), time1(t1) {};
+
+		bool intercepts(Ray& r, float& t);
+		Vector getNormal(Vector point);
+		AABB GetBoundingBox(void);
+		void calculateCenter(float time);
+
+	private:
+		Vector center;
+		Vector center0, center1;
+		float radius, SqRadius;
+		float time0, time1;
+};
 
 class Scene
 {
@@ -181,7 +199,7 @@ private:
 	unsigned int samples_per_pixel;  // samples per pixel
 	accelerator accel_struc_type;
 
-	bool SkyBoxFlg = false;
+	bool SkyBoxFlg = true;
 
 	struct {
 		ILubyte *img;

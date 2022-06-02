@@ -83,7 +83,7 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = NONE;
+accelerator Accel_Struct = NONE; //NONE  GRID_ACC
 
 int RES_X, RES_Y;
 
@@ -92,6 +92,8 @@ int WindowHandle = 0;
 bool SCHLICK_APPROXIMATION = false;
 bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFLECTIONS = false;
+bool MOTION_BLUR = false;
+
 float roughness = 0.2f;
 
 /////////////////////////////////////////////////////////////////////// ERRORS
@@ -596,8 +598,9 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		if (closest_obj->GetMaterial()->GetReflection() > 0) {
 			Vector reflectedDir = ray.direction - N * 2 * (ray.direction * N);
 			Ray reflectedRay = Ray(hit_point + N * EPSILON, reflectedDir);
-			
+
 			if (FUZZY_REFLECTIONS) {
+
 				reflectedRay.direction = (reflectedDir + rnd_unit_sphere() * roughness).normalize();
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 			}
@@ -675,6 +678,10 @@ void renderScene()
 		scene->GetCamera()->SetEye(Vector(camX, camY, camZ));  //Camera motion
 	}
 
+	if (MOTION_BLUR) {
+		scene->GetCamera()->SetTime(0.0, 0.3);
+	}
+
 	for (int y = 0; y < RES_Y; y++)
 	{
 		for (int x = 0; x < RES_X; x++)
@@ -690,10 +697,10 @@ void renderScene()
 
 				if (DEPTH_OF_FIELD) {
 					Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
-					ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+					ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel, MOTION_BLUR);
 				}
 				else {
-					ray = &scene->GetCamera()->PrimaryRay(pixel);   //function from camera.h
+					ray = &scene->GetCamera()->PrimaryRay(pixel, MOTION_BLUR);   //function from camera.h
 				}
 				color = rayTracing(*ray, 1, 1.0).clamp();
 			}
@@ -710,10 +717,10 @@ void renderScene()
 
 						if (DEPTH_OF_FIELD) {
 							Vector lens_sample = rnd_unit_disk() * scene->GetCamera()->GetAperture();
-							ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel);
+							ray = &scene->GetCamera()->PrimaryRay(lens_sample, pixel, MOTION_BLUR);
 						}
 						else {
-							ray = &scene->GetCamera()->PrimaryRay(pixel);  //function from camera.h
+							ray = &scene->GetCamera()->PrimaryRay(pixel, MOTION_BLUR);  //function from camera.h
 						}
 						color += rayTracing(*ray, 1, 1.0).clamp();
 					}
