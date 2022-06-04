@@ -83,7 +83,7 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = GRID_ACC;
+accelerator Accel_Struct = NONE;
 
 int RES_X, RES_Y;
 
@@ -473,6 +473,11 @@ void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* clos
 				shadow = true;
 			}
 		}
+		else if (Accel_Struct == BVH_ACC) {
+			if (bvh_ptr->Traverse(newray)) {
+				shadow = true;
+			}
+		}
 		else {
 			double distance = newray.direction.length(); //distance to light to see if there's an object between the hit point and the light
 			newray.direction.normalize();
@@ -511,6 +516,9 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 	if (Accel_Struct == GRID_ACC) {
 		grid_ptr->Traverse(ray, &closest_obj, hit_point);
+	}
+	else if (Accel_Struct == BVH_ACC) {
+		bvh_ptr->Traverse(ray, &closest_obj, hit_point);
 	}
 	else {
 		for (int i = 0; i < scene->getNumObjects(); i++) {
