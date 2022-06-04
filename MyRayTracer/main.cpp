@@ -36,7 +36,7 @@ bool antialiasing = false;
 float nr_lights = 4;
 float spp = 4;
 
-#define MAX_DEPTH 4  //number of bounces
+#define MAX_DEPTH 6  //number of bounces
 
 #define CAPTION "Whitted Ray-Tracer"
 #define VERTEX_COORD_ATTRIB 0
@@ -83,7 +83,7 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = NONE; //NONE  GRID_ACC
+accelerator Accel_Struct = GRID_ACC;
 
 int RES_X, RES_Y;
 
@@ -465,37 +465,39 @@ void setupGLUT(int argc, char* argv[])
 /////////////////////////////////////////////////////YOUR CODE HERE///////////////////////////////////////////////////////////////////////////////////////
 void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* closest_obj, Ray ray, Color& l_color, Color& color) {
 	float cur_dist = FLT_MAX;
-
 	if (L * N > 0) {
 		bool shadow = false;
-		Ray newray = Ray(N * EPSILON + hit_point, L);
+		Ray newray = Ray(hit_point + N * EPSILON, L);
 		if (Accel_Struct == GRID_ACC) {
-			if (grid_ptr->Traverse(newray))
+			if (grid_ptr->Traverse(newray)) {
 				shadow = true;
+			}
 		}
 		else {
+			double distance = newray.direction.length(); //distance to light to see if there's an object between the hit point and the light
+			newray.direction.normalize();
 			for (int o = 0; o < scene->getNumObjects(); o++) {
 				obj = scene->getObject(o);
-				if (obj->intercepts(newray, cur_dist)) {
+				if (obj->intercepts(newray, cur_dist) && cur_dist < distance) {
 					shadow = true;
 					break;
 				}
 			}
 		}
 
-
 		if (!shadow) {
 			L = L.normalize();
 			float K1 = 1.25;
 			float Katt = 1 / (K1 * (scene->getNumLights()));
 			Vector H = ((L + (ray.direction * -1))).normalize();
-			Color diff = (l_color * closest_obj->GetMaterial()->GetDiffColor()) * (N * L);
-			Color spec = (l_color * closest_obj->GetMaterial()->GetSpecColor()) * pow((H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
+			Color diff = (l_color * closest_obj->GetMaterial()->GetDiffColor()) * (max(0, N * L));
+			Color spec = (l_color * closest_obj->GetMaterial()->GetSpecColor()) * pow(max(0, H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
 
 			color += diff * closest_obj->GetMaterial()->GetDiffuse() + spec * closest_obj->GetMaterial()->GetSpecular();
 		}
 	}
 }
+
 
 Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medium 1 where the ray is travelling
 {
@@ -510,7 +512,6 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 	if (Accel_Struct == GRID_ACC) {
 		grid_ptr->Traverse(ray, &closest_obj, hit_point);
 	}
-
 	else {
 		for (int i = 0; i < scene->getNumObjects(); i++) {
 			obj = scene->getObject(i);
@@ -524,22 +525,28 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 	}
 
 	if (closest_obj == NULL) {
-		return scene->GetBackgroundColor();
+		if (scene->GetSkyBoxFlg())
+			return scene->GetSkyboxColor(ray);
+		else
+			return scene->GetBackgroundColor();
 	}
 
 	else {
+
 		Vector N = (closest_obj->getNormal(hit_point)).normalize();
 		Vector I = (ray.direction * (-1));
 		Light* light = NULL;
 		Vector L;
 		cur_dist = FLT_MAX;
 
+
 		for (int l = 0; l < scene->getNumLights(); l++) {
 			light = scene->getLight(l);
-			Vector L = (light->position - hit_point).normalize();
+			Vector L = (light->position - hit_point);
 
 			//extent of the grid 
 			float ext = 0.5f;
+
 
 			if (soft_shadows) {
 				if (!antialiasing) {
@@ -577,23 +584,24 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 						light->position.z);
 
 					Vector L = (position - hit_point).normalize();
-
 					applyLights(L, N, hit_point, obj, closest_obj, ray, light->color, color);
 				}
+
 			}
 			else {
-				applyLights(L, N, hit_point, obj, closest_obj, ray, light->color, color);
+				applyLights(L, N, hit_point, closest_obj, closest_obj, ray, light->color, color);
 			}
 		}
 
 		if (depth >= MAX_DEPTH) return color;
+
+		Color rColor = Color();
 
 		bool outside = I * N > 0;
 		if (!outside) {
 			N = N * -1;
 		}
 
-		Color rColor = Color();
 
 		if (closest_obj->GetMaterial()->GetReflection() > 0) {
 			Vector reflectedDir = ray.direction - N * 2 * (ray.direction * N);
@@ -609,7 +617,6 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 			}
 		}
-
 
 		Color tColor = Color();
 		float Kr = 1;
