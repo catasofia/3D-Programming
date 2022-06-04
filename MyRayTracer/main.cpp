@@ -31,8 +31,6 @@ bool P3F_scene = true; //choose between P3F scene or a built-in random scene
 
 int init_x;
 int init_y;
-bool soft_shadows = false;
-bool antialiasing = false;
 float nr_lights = 4;
 float spp = 4;
 
@@ -83,13 +81,15 @@ Scene* scene = NULL;
 
 Grid* grid_ptr = NULL;
 BVH* bvh_ptr = NULL;
-accelerator Accel_Struct = NONE;
+accelerator Accel_Struct = BVH_ACC;
 
 int RES_X, RES_Y;
 
 int WindowHandle = 0;
 
-bool SCHLICK_APPROXIMATION = false;
+bool soft_shadows = true;
+bool antialiasing = true;
+bool SCHLICK_APPROXIMATION = true;
 bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFLECTIONS = false;
 bool MOTION_BLUR = false;
@@ -465,15 +465,15 @@ void setupGLUT(int argc, char* argv[])
 /////////////////////////////////////////////////////YOUR CODE HERE///////////////////////////////////////////////////////////////////////////////////////
 void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* closest_obj, Ray ray, Color& l_color, Color& color) {
 	float cur_dist = FLT_MAX;
-	if (L * N > 0) {
+	if (L * N > 0) { // check dot product between light and normal
 		bool shadow = false;
-		Ray newray = Ray(hit_point + N * EPSILON, L);
-		if (Accel_Struct == GRID_ACC) {
+		Ray newray = Ray(hit_point + N * EPSILON, L); //creates a ray between the hit point and the light to see if it is in shadow
+		if (Accel_Struct == GRID_ACC) { // if grid -> traverse a ray to the light to see if it intersects something
 			if (grid_ptr->Traverse(newray)) {
 				shadow = true;
 			}
 		}
-		else if (Accel_Struct == BVH_ACC) {
+		else if (Accel_Struct == BVH_ACC) { // if bvh -> traverse a ray to the light to see if it intersects something
 			if (bvh_ptr->Traverse(newray)) {
 				shadow = true;
 			}
@@ -483,21 +483,23 @@ void applyLights(Vector L, Vector N, Vector hit_point, Object* obj, Object* clos
 			newray.direction.normalize();
 			for (int o = 0; o < scene->getNumObjects(); o++) {
 				obj = scene->getObject(o);
-				if (obj->intercepts(newray, cur_dist) && cur_dist < distance) {
+				if (obj->intercepts(newray, cur_dist) && cur_dist < distance) { //see if intersects an object between the hit point and the light to check if it is in the shadow
 					shadow = true;
 					break;
 				}
 			}
 		}
 
-		if (!shadow) {
+		if (!shadow) { // if it is in shadow, doesnt calculate the color
 			L = L.normalize();
+			// attenuation coefficient to calculate the color having in count the number of lights
 			float K1 = 1.25;
 			float Katt = 1 / (K1 * (scene->getNumLights()));
-			Vector H = ((L + (ray.direction * -1))).normalize();
-			Color diff = (l_color * closest_obj->GetMaterial()->GetDiffColor()) * (max(0, N * L));
-			Color spec = (l_color * closest_obj->GetMaterial()->GetSpecColor()) * pow(max(0, H * N), closest_obj->GetMaterial()->GetShine()) * Katt;
+			Vector H = ((L + (ray.direction * -1))).normalize(); // H = Vn (our light) - V
+			Color diff = (l_color * closest_obj->GetMaterial()->GetDiffColor()) * (max(0, N * L)); //c = cluz * kdiff * n * L
+			Color spec = (l_color * closest_obj->GetMaterial()->GetSpecColor()) * pow(max(0, H * N), closest_obj->GetMaterial()->GetShine()) * Katt; //c = cluz * kspec * (H * N) ^ shine
 
+			//combine both specular and diffuse colors
 			color += diff * closest_obj->GetMaterial()->GetDiffuse() + spec * closest_obj->GetMaterial()->GetSpecular();
 		}
 	}
@@ -514,17 +516,20 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 	Vector hit_point;
 
-	if (Accel_Struct == GRID_ACC) {
+	if (Accel_Struct == GRID_ACC) { // if grid -> traverse a ray to check the closest object and the hit point
 		grid_ptr->Traverse(ray, &closest_obj, hit_point);
 	}
-	else if (Accel_Struct == BVH_ACC) {
+	else if (Accel_Struct == BVH_ACC) { // if bvh -> traverse a ray to check the closest object and the hit point
 		bvh_ptr->Traverse(ray, &closest_obj, hit_point);
 	}
 	else {
+		// it there is no grid, goes through every object and intersects them to find the closest one
 		for (int i = 0; i < scene->getNumObjects(); i++) {
+			// gets object from scene
 			obj = scene->getObject(i);
 
 			if (obj->intercepts(ray, cur_dist) && (cur_dist < min_dist)) {
+				// if it intersects and if it is closer than the previous one, updates
 				closest_obj = obj;
 				min_dist = cur_dist;
 				hit_point = ray.origin + ray.direction * min_dist;
@@ -532,33 +537,34 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		}
 	}
 
+	//if there is no closest obj (no intersection), then it returns the sky box color (when there is a sky box color) or returns the background color 
 	if (closest_obj == NULL) {
-		if (scene->GetSkyBoxFlg())
-			return scene->GetSkyboxColor(ray);
-		else
+		//if (scene->GetSkyBoxFlg())
+		//	return scene->GetSkyboxColor(ray);
+		//else
 			return scene->GetBackgroundColor();
 	}
 
 	else {
 
-		Vector N = (closest_obj->getNormal(hit_point)).normalize();
-		Vector I = (ray.direction * (-1));
-		Light* light = NULL;
+		Vector N = (closest_obj->getNormal(hit_point)).normalize(); // computes the normal in the hit point
+		Vector I = (ray.direction * (-1)); // computes I = opposite direction of ray
+		Light* light = NULL; //initialize light to null
 		Vector L;
 		cur_dist = FLT_MAX;
 
-
+		// goes through every light to compute how the light affects the object
 		for (int l = 0; l < scene->getNumLights(); l++) {
 			light = scene->getLight(l);
-			Vector L = (light->position - hit_point);
+			Vector L = (light->position - hit_point); // vector from light to hit point
 
-			//extent of the grid 
+			//extent of the lights grid 
 			float ext = 0.5f;
 
 
 			if (soft_shadows) {
 				if (!antialiasing) {
-					//For each light put there many lights aroun with 0.5f*0.5f extent around the center
+					// For each light put there many lights around with 0.5f*0.5f extent around the center
 					// Divide intensity, because each ray as the nth of the intensity of the original 
 					Color intensity = light->color * (1.0f / (nr_lights * nr_lights));
 
@@ -573,10 +579,10 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 					for (; y < light->position.y + 0.25f; y += dist) {
 						for (; x < light->position.x + 0.25f; x += dist) {
 
-							//get position of the light, z is the same as the "original", we assume the same "height"
+							// get position of the light, z is the same as the "original", we assume the same "height"
 							Vector position = Vector(x, y, light->position.z);
 
-							Vector L = (position - hit_point).normalize();
+							Vector L = (position - hit_point);
 
 							applyLights(L, N, hit_point, obj, closest_obj, ray, intensity, color);
 						}
@@ -586,12 +592,12 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				}
 				else {
 					//with antialiasing
+					// adds a random value
 					Vector position = Vector(
-						light->position.x + (ext * ((init_x + rand_float()) / spp)), //light->position.x + ext * ((light->position.x + rand_float()) / spp)
+						light->position.x + (ext * ((init_x + rand_float()) / spp)), 
 						light->position.y + (ext * ((init_y + rand_float()) / spp)),
 						light->position.z);
-
-					Vector L = (position - hit_point).normalize();
+					Vector L = (position - hit_point);
 					applyLights(L, N, hit_point, obj, closest_obj, ray, light->color, color);
 				}
 
@@ -601,22 +607,27 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 			}
 		}
 
+		// if the depth >= MAX_DEPTH, ends the program
 		if (depth >= MAX_DEPTH) return color;
 
 		Color rColor = Color();
 
 		bool outside = I * N > 0;
+		// if inside, we need to use the reverse direction of the normal
 		if (!outside) {
 			N = N * -1;
 		}
 
-
+		// check if the material is reflective
 		if (closest_obj->GetMaterial()->GetReflection() > 0) {
+
+			// reflection vector = 2(L*n)n - L
 			Vector reflectedDir = ray.direction - N * 2 * (ray.direction * N);
+			// creates a new ray with the new direction starting from the hit point
 			Ray reflectedRay = Ray(hit_point + N * EPSILON, reflectedDir);
 
 			if (FUZZY_REFLECTIONS) {
-
+				// ray.direction = normalize(R + roughness * rand_in_unit_sphere())
 				reflectedRay.direction = (reflectedDir + rnd_unit_sphere() * roughness).normalize();
 				rColor = rayTracing(reflectedRay, depth + 1, ior_1);
 			}
@@ -630,15 +641,17 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 		float Kr = 1;
 
 		if (closest_obj->GetMaterial()->GetTransmittance() > 0) {
-
+			// initialize second refraction index to 1
 			float ior_t = 1;
+			// if inside, new refraction index continues at 1, otherwise updates to the materials refraction index
 			if (!outside) ior_t = 1;
 			else ior_t = closest_obj->GetMaterial()->GetRefrIndex();
 
-			Vector v = ray.direction * -1;
-			Vector vn = N * (v * N);
-			Vector vt = vn - v;
+			Vector v = ray.direction * -1; // view vector
+			Vector vn = N * (v * N); // normal view vector
+			Vector vt = vn - v; // view tangent
 
+			// Powerpoint -> Whitted Ray - tracing: Practice, slides 45 and 47
 			float costetai = vn.length();
 			float sintetai = vt.length();
 			float sintetat = (ior_1 / ior_t) * sintetai;
@@ -652,6 +665,7 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 			tColor = rayTracing(refractedRay, depth + 1, ior_t);
 
 			if (!SCHLICK_APPROXIMATION) {
+				// Powerpoint -> Whitted Ray - tracing: Practice, slide 49
 				// Fresnel equations - perpendicular polarised light
 				float RperD = (ior_1 * costetai - ior_t * costetat) / (ior_1 * costetai + ior_t * costetat);
 				float Rper = pow(fabs(RperD), 2);
@@ -662,17 +676,21 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 				Kr = (1 / 2) * (Rper + Rpar);
 			}
 			else {
+				// Powerpoint -> Whitted Ray - tracing: Practice, slide 50 
 				float R0_aux = (ior_1 - ior_t) / (ior_1 + ior_t);
 				float R0 = pow(R0_aux, 2);
+				// if internal reflection replace teta_i by teta_t
 				if (I * N > 0)
 					Kr = R0 + (1.0 - R0) * pow(1 - costetai, 5);
 				else
 					Kr = R0 + (1.0 - R0) * pow(1 - costetat, 5);
 			}
 		}
-		else Kr = closest_obj->GetMaterial()->GetSpecular();
+		else Kr = closest_obj->GetMaterial()->GetSpecular(); // the material isnt refractive, so we obtain the specular
 
 		color += tColor * (1 - Kr) * closest_obj->GetMaterial()->GetDiffColor();
+		
+		// only adds reflective color if kr > 0
 		if (Kr > 0)
 			color += rColor * Kr * closest_obj->GetMaterial()->GetSpecColor();
 
@@ -720,6 +738,7 @@ void renderScene()
 				color = rayTracing(*ray, 1, 1.0).clamp();
 			}
 			else {
+				// Powerpoint Distribution Ray-Tracing, slide 25
 				for (int p = 0; p < spp; p++) {
 					for (int q = 0; q < spp; q++) {
 						pixel.x = x + (p + rand_float()) / spp;

@@ -81,13 +81,14 @@ public:
 
 	Ray PrimaryRay(const Vector& pixel_sample, bool MOTION_BLUR) //  Rays cast from the Eye to a pixel sample which is in Viewport coordinates
 	{
-		Vector vX = u * w * (pixel_sample.x / res_x - 0.5f);
-		Vector vY = v * h * (pixel_sample.y / res_y - 0.5f);
-		Vector vZ = n * -plane_dist;
+		// Powerpoint Whitted Ray-Tracing: Practice, slide 31
+		Vector vector_x = u * w * (pixel_sample.x / res_x - 0.5f);
+		Vector vector_y = v * h * (pixel_sample.y / res_y - 0.5f);
+		Vector vector_z = n * -plane_dist;
 
 		Vector ray_dir;
 
-		ray_dir = (vX + vY + vZ).normalize();
+		ray_dir = (vector_x + vector_y + vector_z).normalize();
 
 		float time = 0.0;
 		if (MOTION_BLUR) {
@@ -99,7 +100,7 @@ public:
 
 	Ray PrimaryRay(const Vector& lens_sample, const Vector& pixel_sample, bool MOTION_BLUR) // DOF: Rays cast from  a thin lens sample to a pixel sample
 	{
-
+		// Powerpoint Distribution Ray-Tracing, Slide 39
 		Vector ray_dir;
 		Vector eye_offset;
 

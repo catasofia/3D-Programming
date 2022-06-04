@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <string>
 #include <fstream>
 
@@ -22,6 +22,7 @@ Triangle::Triangle(Vector& P0, Vector& P1, Vector& P2)
 
 	normal.normalize();
 
+	// to obtain bounding box calculates min and max from the points
 	float minx_p0p1 = min(P0.x, P1.x);
 	float minx = min(minx_p0p1, P2.x);
 
@@ -72,14 +73,14 @@ bool Triangle::intercepts(Ray& r, float& t ) {
 	Vector edge1 = vert1 - vert0;
 	Vector edge2 = vert2 - vert0;
 
-	// a x b = i (a2 b3 – a3 b2) + j (a3 b1 – a1 b3) + k (a1 b2 – a2 b1)
+	// a x b = i (a2 b3 â€“ a3 b2) + j (a3 b1 â€“ a1 b3) + k (a1 b2 â€“ a2 b1)
 	// cross product ray direction with edge2
 	Vector cross_rayDir_edge2 = Vector(0, 0, 0);
 	cross_rayDir_edge2.x = (r.direction.y * edge2.z) - (r.direction.z * edge2.y);
 	cross_rayDir_edge2.y = (r.direction.z * edge2.x) - (r.direction.x * edge2.z);
 	cross_rayDir_edge2.z = (r.direction.x * edge2.y) - (r.direction.y * edge2.x);
 
-	//determinante (dot product do vector obtido c edge1)
+	//determinant (dot product between the obtained vector and the edge1)
 	float det = edge1 * cross_rayDir_edge2;
 
 	if (det > -0.0000001f && det < 0.0000001f) return false; //ray is parallel with triangle (n podemos dividir por 0)
@@ -94,7 +95,7 @@ bool Triangle::intercepts(Ray& r, float& t ) {
 	// check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within)
 	if (u < 0.0f || u > 1.0f) return false;
 
-	// a x b = i (a2 b3 – a3 b2) + j (a3 b1 – a1 b3) + k (a1 b2 – a2 b1)
+	// a x b = i (a2 b3 â€“ a3 b2) + j (a3 b1 â€“ a1 b3) + k (a1 b2 â€“ a2 b1)
 	// cross product 
 	Vector cross_origMinusVert0_edge1 = Vector(0, 0, 0);
 	cross_origMinusVert0_edge1.x = (orig_minus_vert0.y * edge1.z) - (orig_minus_vert0.z * edge1.y);
@@ -140,16 +141,17 @@ Plane::Plane(Vector& P0, Vector& P1, Vector& P2)
 
 bool Plane::intercepts( Ray& r, float& t )
 {
-	float numerator = (r.origin - P) * PN;
-	float denom = PN * r.direction;
+	float numerator = (r.origin - P) * PN; //(origin - point) * n
+	float denom = PN * r.direction; // normal * direction
 
-	if (fabs(denom) == 0) {
+	if (fabs(denom) == 0) { // if (n * d) == 0, plane and ray are parallel
 		return false;
 	}
 
 	t = -(numerator / denom);
 
-	if (t > 0) {
+	// if t < 0, intersection is behind the origin of the ray and rejects
+	if (t >= 0) {
 		return true;
 	}
 	
@@ -164,27 +166,27 @@ Vector Plane::getNormal(Vector point)
 
 bool Sphere::intercepts(Ray& r, float& t )
 {
-	Vector OC = center - r.origin;
+	Vector OC = center - r.origin; // center of sphere - origin of ray
 
-	float b = OC * r.direction;
-	float c = OC * OC - pow(radius, 2);
+	float b = OC * r.direction; // d * OC
+	float c = OC * OC - pow(radius, 2); //OC * OC - r^2
 
-	if (c > 0) {
-		if (b <= 0) {
+	if (c > 0) { // ray origin is outside
+		if (b <= 0) { // sphere is behind of the ray and return false
 			return false;
 		}
 	}
 
-	float discriminant = (pow(b,2) - c);
+	float discriminant = (pow(b,2) - c); // discriminant = b ^ 2 - c
 
 	if (discriminant <= 0) {
 		return false;
 	}
 
-	if (c > 0) {
+	if (c > 0) { // if origin of ray is outside, compute the smallest root
 		t = b - sqrt(discriminant);
 	}
-	else {
+	else { // if origin of ray is inside, compute the positive root
 		t = b + sqrt(discriminant);
 	}
 
@@ -202,6 +204,7 @@ AABB Sphere::GetBoundingBox() {
 	Vector a_min;
 	Vector a_max;
 
+	// to get bounding box, computes min and max by subtracting and suming radius
 	a_min = Vector(center.x - radius, center.y - radius, center.z - radius);
 	a_max = Vector(center.x + radius, center.y + radius, center.z + radius);
 
@@ -209,9 +212,10 @@ AABB Sphere::GetBoundingBox() {
 }
 
 
+// equal to Sphere
 bool MovingSphere::intercepts(Ray& r, float& t)
 {
-
+	
 	calculateCenter(r.time);
 
 	Vector OC = center - r.origin;
@@ -274,6 +278,8 @@ AABB aaBox::GetBoundingBox() {
 
 bool aaBox::intercepts(Ray& ray, float& t)
 {
+	// Kay and Kajiya algorithm
+	// Powerpoint Ray-Geometry intersections, slides 35 and 36
 	double ox = ray.origin.getAxisValue(0);
 	double oy = ray.origin.getAxisValue(1);
 	double oz = ray.origin.getAxisValue(2);

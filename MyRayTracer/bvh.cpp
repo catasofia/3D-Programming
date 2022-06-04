@@ -78,8 +78,9 @@ void BVH::build_recursive(int left_index, int right_index, BVHNode *node) {
 			float mid_point = (node_bbox.max.getAxisValue(dimension) + node_bbox.min.getAxisValue(dimension)) * 0.5f ;
 
 			// No sides empty, recalculate mid_point
-			if (objects[left_index]->getCentroid().getAxisValue(dimension) > mid_point || objects[right_index - 1]->getCentroid().getAxisValue(dimension) <= mid_point) {
+			if (objects[left_index]->getCentroid().getAxisValue(dimension) > mid_point || objects[right_index - 1.0]->getCentroid().getAxisValue(dimension) <= mid_point) {
 				mid_point = 0.0f;
+				// find mid point based on the centroid of the objects 
 				for (int i = left_index; i < right_index; i++) {
 					mid_point = mid_point + objects[i]->getCentroid().getAxisValue(dimension);
 				}
@@ -169,7 +170,7 @@ bool BVH::Traverse(Ray& ray, Object** hit_obj, Vector& hit_point) {
 					left_hit = left_child->getAABB().intercepts(ray, left_dist);
 					if (left_child->getAABB().isInside(ray.origin)) left_dist = 0;
 
-					right_child = nodes[currentNode->getIndex() + 1];
+					right_child = nodes[currentNode->getIndex() + 1.0];
 					right_hit = right_child->getAABB().intercepts(ray, right_dist);
 					if (right_child->getAABB().isInside(ray.origin)) right_dist = 0;
 
@@ -261,7 +262,7 @@ bool BVH::Traverse(Ray& ray) {  //shadow ray with length
 					bool left_hit = left_child->getAABB().intercepts(ray, left_dist);
 
 					float right_dist;
-					right_child = nodes[currentNode->getIndex() + 1];
+					right_child = nodes[currentNode->getIndex() + 1.0];
 					bool right_hit = right_child->getAABB().intercepts(ray, right_dist);
 
 					if (left_hit && right_hit) { // both nodes hit => Put the one furthest away on the stack. CurrentNode = closest node
