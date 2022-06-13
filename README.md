@@ -12,4 +12,5 @@
 ### Grades
 | Solution          | Grade 			   	|
 | :-----------------| :-------------: |
-|         |   -  |
+|   [Assignment 1](https://github.com/catasofia/3D-Programming/tree/main/Assignment_1) |  -- / *20.00*  |
+|   Assignment 2 |  -- / *20.00*  |
