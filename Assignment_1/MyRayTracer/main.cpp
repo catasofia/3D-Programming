@@ -87,9 +87,9 @@ int RES_X, RES_Y;
 
 int WindowHandle = 0;
 
-bool soft_shadows = true;
-bool antialiasing = true;
-bool SCHLICK_APPROXIMATION = true;
+bool soft_shadows = false;
+bool antialiasing = false;
+bool SCHLICK_APPROXIMATION = false;
 bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFLECTIONS = false;
 bool MOTION_BLUR = false;
@@ -539,9 +539,9 @@ Color rayTracing(Ray ray, int depth, float ior_1)  //index of refraction of medi
 
 	//if there is no closest obj (no intersection), then it returns the sky box color (when there is a sky box color) or returns the background color 
 	if (closest_obj == NULL) {
-		//if (scene->GetSkyBoxFlg())
-		//	return scene->GetSkyboxColor(ray);
-		//else
+		if (scene->GetSkyBoxFlg())
+			return scene->GetSkyboxColor(ray);
+		else
 			return scene->GetBackgroundColor();
 	}
 
