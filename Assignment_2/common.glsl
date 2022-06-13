@@ -213,7 +213,16 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 {
     if(rec.material.type == MT_DIFFUSE)
     {
-        //INSERT CODE HERE,
+        // consider a unit radius sphere tangent to the hit point and
+        // calculate point S on its surface
+        vec3 S = rec.pos + rec.normal + normalize(randomInUnitSphere(gSeed));
+        
+        // pointing from the ray position to S
+        rayDirection = normalize(S - rec.pos)
+        
+        //creates ray from the hit point with the new direction
+        rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
+        
         atten = rec.material.albedo * max(dot(rScattered.d, rec.normal), 0.0) / pi;
         return true;
     }
@@ -335,13 +344,37 @@ vec3 center(MovingSphere mvsphere, float time)
 
 bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    //INSERT YOUR CODE HERE
-    //calculate a valid t and normal
+    vec3 OC = s.center - r.o;
+    
+    float b = dot(OC, r.d);
+    float c = dot(OC, OC) - pow(s.radius, 2);
 	
+    if(c > 0) {
+        if (b <= 0){
+            return false;
+        }
+    }
+
+    float discriminant = b * b - c;
+    if (discriminant <= 0){
+        return false
+    }
+
+    if(c > 0){
+        t = b - sqrt(discriminant);
+    } else{
+        t = b + sqrt(discriminant;)
+    }
+
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal
+
+        if(s.radius >= 0){
+            rec.normal = normalize(rec.pos - s.center);
+        } else{
+            rec.normal = normalize(s.center - rec.pos);
+        }
         return true;
     }
     else return false;
