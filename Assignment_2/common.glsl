@@ -333,7 +333,7 @@ MovingSphere createMovingSphere(vec3 center0, vec3 center1, float radius, float 
 
 vec3 center(MovingSphere mvsphere, float time)
 {
-    return moving_center;
+    return mvsphere.center0 + (mvsphere.center1 - mvsphere.center0) * ((time - mvsphere.time0) / (mvsphere.time1 - mvsphere.time0));
 }
 
 
@@ -382,19 +382,37 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    float B, C, delta;
-    bool outside;
-    float t;
-
-
-     //INSERT YOUR CODE HERE
-     //Calculate the moving center
-    //calculate a valid t and normal
+    vec3 OC = center(s, r.t) - r.o;
+    
+    float b = dot(OC, r.d);
+    float c = dot(OC, OC) - pow(s.radius, 2);
 	
+    if(c > 0) {
+        if (b <= 0){
+            return false;
+        }
+    }
+
+    float discriminant = b * b - c;
+    if (discriminant <= 0){
+        return false
+    }
+
+    if(c > 0){
+        t = b - sqrt(discriminant);
+    } else{
+        t = b + sqrt(discriminant;)
+    }
+
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
-        rec.normal = normal;
+
+        if(s.radius >= 0){
+            rec.normal = normalize(rec.pos - s.center);
+        } else{
+            rec.normal = normalize(s.center - rec.pos);
+        }
         return true;
     }
     else return false;
