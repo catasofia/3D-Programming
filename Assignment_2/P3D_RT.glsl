@@ -169,26 +169,32 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
     float shininess;
     HitRecord dummy;
 
-   // vector from light to hit point
     vec3 L = (pl.pos - rec.pos);
-
-    //applylights
-    // computes the normal in the hit point
     vec3  N  = normalize(rec.normal);
 
     if(dot(L, N) > 0.0){
-        //creates a ray between the hit point and the light to see if it is in shadow
+
         Ray newray = createRay(rec.pos + N * epsilon, L);
 
-        //distance to light to see if there's an object between the hit point and the light
         float distance = length(newray.d); 
         normalize(newray.d);
 
-        //see if intersects an object between the hit point and the light to check if it is in the shadow
         if(hit_world(newray, 0.0, distance, dummy)) {
             return colorOut;
         }
+
+        L = normalize(L);
         
+        // attenuation coefficient to calculate the color having in count the number of lights
+		//float K1 = 1.25;
+		//float Katt = 1 / (K1 * (scene->getNumLights()));
+        
+        //por sempre 0.0 p n dar erro
+        vec3 H =  normalize(L - r.d); // H = Vn (our light) - V
+		diffCol = (pl.color  * diffCol) * (max(0.0, dot(N, L))); //c = cluz * kdiff * n * L
+		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess);  // * Katt; //c = cluz * kspec * (H * N) ^ shine
+
+		colorOut += diffCol * rec.material.albedo + specCol * rec.material.specColor;
 
     }
 
@@ -221,7 +227,10 @@ vec3 rayColor(Ray r)
             Ray scatterRay;
             vec3 atten;
             if(scatter(r, rec, atten, scatterRay))
-            {   //  insert your code here    }
+            { 
+                // slide 12 - GLSL
+                r = scatterRay;
+                throughput *= atten; 
         
         }
         else  //background
