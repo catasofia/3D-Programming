@@ -218,7 +218,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         vec3 S = rec.pos + rec.normal + normalize(randomInUnitSphere(gSeed));
         
         // pointing from the ray position to S
-        rayDirection = normalize(S - rec.pos)
+        vec3 rayDirection = normalize(S - rec.pos);
         
         //creates ray from the hit point with the new direction
         rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
