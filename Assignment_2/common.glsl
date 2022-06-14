@@ -228,7 +228,14 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     }
     if(rec.material.type == MT_METAL)
     {
-       //INSERT CODE HERE, consider fuzzy reflections
+        // calulate direction taking into account roughness
+        // ray.direction = normalize(R + roughness * rand_in_unit_sphere())
+        vec3 rayDirection = rIn.d - rec.normal * 2 * dot(rIn.d, rec.normal);
+        rayDirection = normalize(rayDirection + randomInUnitSphere(gSeed) * rec.material.roughness);
+
+        //creates ray from the hit point with the new direction
+        rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
+        
         atten = rec.material.specColor;
         return true;
     }
