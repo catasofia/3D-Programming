@@ -309,16 +309,49 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
     //INSERT YOUR CODE HERE
+    vec3 vert0 = tg.a, vert1 = tg.b, vert2 = tg.c
+
+    // get edges of the triangle (sharing v0)
+	vec3 edge1 = vert1 - vert0;
+	vec3 edge2 = vert2 - vert0;
+
+    vec3 cross_rayDir_edge2 = cross(r.d, edge2);
+    float det = dot(edge1, cross_rayDir_edge2);
+
+    if (det > -0.0000001f && det < 0.0000001f) return false; //ray is parallel with triangle (n podemos dividir por 0)
+
+    float inv_det = 1.0f / det;
+
+    // distance from ray origin to v0 (t)   
+    vec3 orig_minus_vert0 = r.o - vert0;
+
+    //calculate baryU
+	float u = dot(inv_det, dot(orig_minus_vert0, cross_rayDir_edge2));
+
+    // check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within)
+	if (u < 0.0f || u > 1.0f) return false;
+
+   vec3 cross_origMinusVert0_edge1 = cross(orig_minus_vert0, edge1);
+
+    //calculate baryV
+   float v =  dot(inv_det, dot(r.direction, cross_origMinusVert0_edge1));
+
+    // check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within) 
+	if (v < 0.0f || u + v > 1.0f) return false;
+
+    t = dot(inv_det, dot(edge2, cross_origMinusVert0_edge1));
+
     //calculate a valid t and normal
-   /* if(t < tmax && t > tmin)
+    if(t < tmax && t > tmin)
     {
         rec.t = t;
         rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
         return true;
-    }*/
+    }
     return false;
 }
+
 
 
 struct Sphere
