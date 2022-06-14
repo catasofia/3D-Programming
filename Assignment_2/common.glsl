@@ -308,8 +308,9 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    //INSERT YOUR CODE HERE
-    vec3 vert0 = tg.a, vert1 = tg.b, vert2 = tg.c
+    vec3 vert0 = t.a; 
+    vec3 vert1 = t.b;
+    vec3 vert2 = t.c;
 
     // get edges of the triangle (sharing v0)
 	vec3 edge1 = vert1 - vert0;
@@ -334,17 +335,18 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
    vec3 cross_origMinusVert0_edge1 = cross(orig_minus_vert0, edge1);
 
     //calculate baryV
-   float v =  dot(inv_det, dot(r.direction, cross_origMinusVert0_edge1));
+   float v =  dot(inv_det, dot(r.d, cross_origMinusVert0_edge1));
 
     // check if the values are within the triangle (bary not bigger than 1 and not smaller than 0 if it is within) 
 	if (v < 0.0f || u + v > 1.0f) return false;
 
-    t = dot(inv_det, dot(edge2, cross_origMinusVert0_edge1));
-
+    float taux = dot(inv_det, dot(edge2, cross_origMinusVert0_edge1));
+    vec3 normal = normalize(cross(edge1, edge2));
+    
     //calculate a valid t and normal
-    if(t < tmax && t > tmin)
+    if(taux < tmax && taux > tmin)
     {
-        rec.t = t;
+        rec.t = taux;
         rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
         return true;
