@@ -169,7 +169,30 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
     float shininess;
     HitRecord dummy;
 
-   //INSERT YOUR CODE HERE
+   // vector from light to hit point
+    vec3 L = (pl.pos - rec.pos);
+
+    //applylights
+    // computes the normal in the hit point
+    vec3  N  = normalize(rec.normal);
+
+    if(dot(L, N) > 0.0){
+        //creates a ray between the hit point and the light to see if it is in shadow
+        Ray newray = createRay(rec.pos + N * epsilon, L);
+
+        //distance to light to see if there's an object between the hit point and the light
+        float distance = length(newray.d); 
+        normalize(newray.d);
+
+        //see if intersects an object between the hit point and the light to check if it is in the shadow
+        if(hit_world(newray, 0.0, distance, dummy)) {
+            return colorOut;
+        }
+        
+
+    }
+
+
     
 	return colorOut; 
 }
