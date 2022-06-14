@@ -136,10 +136,26 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
 {
     vec2 ls = cam.lensRadius * randomInUnitDisk(gSeed);  //ls - lens sample for DOF
     float time = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
-    
-    //Calculate eye_offset and ray direction
 
-    return createRay(eye_offset, normalize(ray direction), time);
+    vec3 eye_offset;
+    vec3 ray_dir; 
+
+    vec3 ps;
+
+    ps.x = cam.width * (pixel_sample.x / iResolution.x - 0.5);
+    ps.y = cam.height * (pixel_sample.y / iResolution.y - 0.5);
+
+    vec3 p;
+
+    p.x = ps.x * cam.focusDist;
+    p.y = ps.y * cam.focusDist;
+   
+   ray_dir = (cam.u * (p.x - ls.x) + cam.v * (p.y - ls.y) + cam.n * cam.focusDist * -cam.planeDist);
+   
+   eye_offset = cam.eye + (cam.u * ls.x) + (cam.v * ls.y);
+
+
+    return createRay(eye_offset, normalize(ray_dir), time);
 }
 
 // MT_ material type
@@ -206,7 +222,7 @@ struct HitRecord
 
 float schlick(float cosine, float refIdx)
 {
-    //INSERT YOUR CODE HERE
+    return 1.0;
 }
 
 bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
@@ -230,7 +246,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     {
         // calulate direction taking into account roughness
         // ray.direction = normalize(R + roughness * rand_in_unit_sphere())
-        vec3 rayDirection = rIn.d - rec.normal * 2 * dot(rIn.d, rec.normal);
+        vec3 rayDirection = rIn.d - 2.0 * rec.normal * dot(rIn.d, rec.normal);
         rayDirection = normalize(rayDirection + randomInUnitSphere(gSeed) * rec.material.roughness);
 
         //creates ray from the hit point with the new direction
@@ -250,8 +266,8 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
-            cosine = refraction cosine for schlick; 
-            atten = apply Beer's law by using rec.material.refractColor
+           // cosine = refraction cosine for schlick; 
+            //atten = apply Beer's law by using rec.material.refractColor
         }
         else  //hit from outside
         {
@@ -267,7 +283,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
         //else reflectProb = 1.0;
 
-        if( hash1(gSeed) < reflectProb)  //Reflection
+        if( hash1(gSeed) < reflectProb) { //Reflection
         // rScattered = calculate reflected ray
           // atten *= vec3(reflectProb); not necessary since we are only scattering reflectProb rays and not all reflected rays
         
@@ -294,13 +310,13 @@ bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
     //INSERT YOUR CODE HERE
     //calculate a valid t and normal
-    if(t < tmax && t > tmin)
+   /* if(t < tmax && t > tmin)
     {
         rec.t = t;
         rec.normal = normal;
         rec.pos = pointOnRay(r, rec.t);
         return true;
-    }
+    }*/
     return false;
 }
 
@@ -354,30 +370,31 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
     vec3 OC = s.center - r.o;
     
     float b = dot(OC, r.d);
-    float c = dot(OC, OC) - pow(s.radius, 2);
+    float c = dot(OC, OC) - s.radius * s.radius;
+    float t = 0.0;
 	
-    if(c > 0) {
-        if (b <= 0){
+    if(c > 0.0) {
+        if (b <= 0.0){
             return false;
         }
     }
 
     float discriminant = b * b - c;
-    if (discriminant <= 0){
-        return false
+    if (discriminant <= 0.0){
+        return false;
     }
 
-    if(c > 0){
+    if(c > 0.0){
         t = b - sqrt(discriminant);
     } else{
-        t = b + sqrt(discriminant;)
+        t = b + sqrt(discriminant);
     }
 
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
 
-        if(s.radius >= 0){
+        if(s.radius >= 0.0){
             rec.normal = normalize(rec.pos - s.center);
         } else{
             rec.normal = normalize(s.center - rec.pos);
@@ -392,33 +409,34 @@ bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitReco
     vec3 OC = center(s, r.t) - r.o;
     
     float b = dot(OC, r.d);
-    float c = dot(OC, OC) - pow(s.radius, 2);
+    float c = dot(OC, OC) - s.radius * s.radius;
+    float t = 0.0;
 	
-    if(c > 0) {
-        if (b <= 0){
+    if(c > 0.0) {
+        if (b <= 0.0){
             return false;
         }
     }
 
     float discriminant = b * b - c;
-    if (discriminant <= 0){
-        return false
+    if (discriminant <= 0.0){
+        return false;
     }
 
-    if(c > 0){
+    if(c > 0.0){
         t = b - sqrt(discriminant);
     } else{
-        t = b + sqrt(discriminant;)
+        t = b + sqrt(discriminant);
     }
 
     if(t < tmax && t > tmin) {
         rec.t = t;
         rec.pos = pointOnRay(r, rec.t);
 
-        if(s.radius >= 0){
-            rec.normal = normalize(rec.pos - s.center);
+        if(s.radius >= 0.0){
+            rec.normal = normalize(rec.pos - center(s, r.t));
         } else{
-            rec.normal = normalize(s.center - rec.pos);
+            rec.normal = normalize(center(s, r.t) - rec.pos);
         }
         return true;
     }
