@@ -231,6 +231,7 @@ vec3 rayColor(Ray r)
                 // slide 12 - GLSL
                 r = scatterRay;
                 throughput *= atten; 
+            }
         
         }
         else  //background
