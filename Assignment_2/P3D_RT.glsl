@@ -186,13 +186,13 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
         L = normalize(L);
         
         // attenuation coefficient to calculate the color having in count the number of lights
-		//float K1 = 1.25;
-		//float Katt = 1 / (K1 * (scene->getNumLights()));
+		float K1 = 1.25;
+		float Katt = 1.0 / (K1 * 3.0);
         
         //por sempre 0.0 p n dar erro
         vec3 H =  normalize(L - r.d); // H = Vn (our light) - V
 		diffCol = (pl.color  * diffCol) * (max(0.0, dot(N, L))); //c = cluz * kdiff * n * L
-		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess);  // * Katt; //c = cluz * kspec * (H * N) ^ shine
+		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess) * Katt; //c = cluz * kspec * (H * N) ^ shine
 
 		colorOut += diffCol * rec.material.albedo + specCol * rec.material.specColor;
 
@@ -216,14 +216,16 @@ vec3 rayColor(Ray r)
         {
             //calculate direct lighting with 3 white point lights:
             {
-                //pointLight pl1 = createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0));
-                //pointLight pl2 = createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0, 1.0, 1.0));
-                //pointLight pl3 = createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0, 1.0, 1.0));
+                pointLight pl1 = createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0));
+                pointLight pl2 = createPointLight(vec3(8.0, 15.0, 3.0), vec3(1.0, 1.0, 1.0));
+                pointLight pl3 = createPointLight(vec3(1.0, 15.0, -9.0), vec3(1.0, 1.0, 1.0));
 
                 //for instance: col += directlighting(createPointLight(vec3(-10.0, 15.0, 0.0), vec3(1.0, 1.0, 1.0)), r, rec) * throughput;
-                //col += directlighting(pl1, r, rec) * throughput;
-                //col += directlighting(pl2, r, rec) * throughput;
-                //col += directlighting(pl3, r, rec) * throughput;
+                col += directlighting(pl1, r, rec) * throughput;
+                col += directlighting(pl2, r, rec) * throughput;
+                col += directlighting(pl3, r, rec) * throughput;
+
+                
             }
            
             //calculate secondary ray and update throughput
