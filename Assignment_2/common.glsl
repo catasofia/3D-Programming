@@ -172,6 +172,7 @@ struct Material
     float roughness; // controls roughness for metals. It can be used for rough refractions
     float refIdx; // index of refraction for dialectric
     vec3 refractColor; // absorption for beer's law
+    float refractionRoughness; //roughness for refraction
 };
 
 Material createDiffuseMaterial(vec3 albedo)
@@ -198,7 +199,7 @@ Material createMetalMaterial(vec3 specClr, float roughness)
     return m;
 }
 
-Material createDialectricMaterial(vec3 refractClr, float refIdx, float roughness)
+Material createDialectricMaterial(vec3 refractClr, float refIdx, float roughness, float refractionRoughness)
 {
     Material m;
     m.type = MT_DIALECTRIC;
@@ -207,6 +208,7 @@ Material createDialectricMaterial(vec3 refractClr, float refIdx, float roughness
     m.refIdx = refIdx;
     m.refractColor = refractClr;  
     m.roughness = roughness;
+    m.refractionRoughness = refractionRoughness;
     m.emissive = vec3(0.0);
     return m;
 }
@@ -293,11 +295,11 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
 
         float reflectProb;
 
-        //AQUI
-        float r = 1.0 - niOverNt * niOverNt * (1.0 - cosine * cosine);
+        //https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/
+        float aux = 1.0 - niOverNt * niOverNt * (1.0 - cosine * cosine);
 
 
-        if (r > 0.0){ //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
+        if (aux > 0.0){ //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
             reflectProb = schlick(cosine, ior_1, ior_t);
         } else {
             reflectProb = 1.0;
@@ -313,10 +315,11 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             //atten *= vec3(reflectProb); not necessary since we are only scattering reflectProb rays and not all reflected rays
         
         }else{  //Refraction 
-            //AQUI                            indice de refr * dir +  (???) * normal
-            vec3 rayDirection = normalize(niOverNt * rIn.d + (niOverNt * cosine - sqrt(r)) * outwardNormal);
-                       
-            rayDirection = normalize(rayDirection + randomInUnitSphere(gSeed) * rec.material.roughness);
+                    //                      indice de refr * dir + angulo * normal
+            vec3 rayDirection = normalize(niOverNt * rIn.d + (niOverNt * cosine - sqrt(aux)) * outwardNormal);
+            
+            //https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/
+            rayDirection = normalize(mix(rayDirection, normalize(outwardNormal + randomInUnitSphere(gSeed)), rec.material.refractionRoughness * rec.material.refractionRoughness));
              
             rScattered = createRay(rec.pos - outwardNormal * epsilon, rayDirection, rIn.t);
             //atten *= vec3(1.0 - reflectProb); not necessary since we are only scattering 1-reflectProb rays and not all refracted rays
