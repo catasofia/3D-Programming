@@ -11,6 +11,7 @@ bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFRACTION = false;
 
 float refractionRoughness = 0.2; //roughness for fuzzy refraction
+vec3 beerslaw = vec3(0, 0, 0); //refraction color for beer's law, put (0,0,0) if no color
 
 bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
 {
@@ -61,9 +62,9 @@ bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
     {
         hit = true;
         if(FUZZY_REFRACTION){
-            rec.material = createDialectricMaterial(vec3(0.0), 1.333, 0.0, refractionRoughness);
+            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, refractionRoughness);
         } else {
-            rec.material = createDialectricMaterial(vec3(0.0), 1.333, 0.0, 0.0);
+            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, 0.0);
         }
     }
 
@@ -76,9 +77,9 @@ if(hit_sphere(
     {
         hit = true;
         if(FUZZY_REFRACTION){
-            rec.material = createDialectricMaterial(vec3(0.0), 1.333, 0.0, refractionRoughness);
+            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, refractionRoughness);
         } else {
-            rec.material = createDialectricMaterial(vec3(0.0), 1.333, 0.0, 0.0);
+            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, 0.0);
         }
 
     }
@@ -170,7 +171,7 @@ if(hit_sphere(
                         rec.material.type = MT_DIALECTRIC;
 
                         if(FUZZY_REFRACTION){
-                            rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, refractionRoughness);
+                            rec.material = createDialectricMaterial(hash3(seed) , 1.2, 0.0, refractionRoughness);
                         } else {
                             rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, 0.0);
                         }

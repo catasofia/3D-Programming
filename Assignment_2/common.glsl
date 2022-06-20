@@ -263,7 +263,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     }
     if(rec.material.type == MT_DIALECTRIC)
     {
-        atten = vec3(1.0);  //TODO
+        atten = vec3(1.0);  
         vec3 outwardNormal;
         float niOverNt;
         float cosine;
@@ -279,7 +279,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
            
             ior_1 = rec.material.refIdx;
             ior_t = 1.0;
-            //TODO atten = apply Beer's law by using rec.material.refractColor
+            atten = exp(-rec.material.refractColor * rec.t);  //beer's law
         }
         else  //hit from outside
         {
