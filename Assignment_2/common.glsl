@@ -237,7 +237,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     {
         // consider a unit radius sphere tangent to the hit point and
         // calculate point S on its surface
-        vec3 S = rec.pos + rec.normal + normalize(randomInUnitSphere(gSeed));
+        vec3 S = rec.pos + rec.normal + randomInUnitSphere(gSeed);
         
         // pointing from the ray position to S
         vec3 rayDirection = normalize(S - rec.pos);
@@ -263,14 +263,14 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
     }
     if(rec.material.type == MT_DIALECTRIC)
     {
-        atten = vec3(1.0);  
+        atten = vec3(1.0);  //TODO
         vec3 outwardNormal;
         float niOverNt;
         float cosine;
         float ior_1;
         float ior_t;
 
-        if(dot(rIn.d, rec.normal) > 0.0) //hit inside
+        if(dot(rIn.d, rec.normal) >= 0.0) //hit inside
         {
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
@@ -279,6 +279,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
            
             ior_1 = rec.material.refIdx;
             ior_t = 1.0;
+            //TODO atten = apply Beer's law by using rec.material.refractColor
             atten = exp(-rec.material.refractColor * rec.t);  //beer's law
         }
         else  //hit from outside
@@ -298,7 +299,6 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         //https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/
         float aux = 1.0 - niOverNt * niOverNt * (1.0 - cosine * cosine);
 
-
         if (aux > 0.0){ //if no total reflection  reflectProb = schlick(cosine, rec.material.refIdx);  
             reflectProb = schlick(cosine, ior_1, ior_t);
         } else {
@@ -315,9 +315,9 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             //atten *= vec3(reflectProb); not necessary since we are only scattering reflectProb rays and not all reflected rays
         
         }else{  //Refraction 
-                    //                      indice de refr * dir + angulo * normal
+                //                      indice de refr * dir + angulo * normal
             vec3 rayDirection = normalize(niOverNt * rIn.d + (niOverNt * cosine - sqrt(aux)) * outwardNormal);
-            
+
             //https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/
             rayDirection = normalize(mix(rayDirection, normalize(outwardNormal + randomInUnitSphere(gSeed)), rec.material.refractionRoughness * rec.material.refractionRoughness));
              

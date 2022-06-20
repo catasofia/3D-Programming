@@ -11,7 +11,9 @@ bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFRACTION = false;
 
 float refractionRoughness = 0.2; //roughness for fuzzy refraction
-vec3 beerslaw = vec3(0, 0, 0); //refraction color for beer's law, put (0,0,0) if no color
+
+vec3 beerslaw = vec3(0.0, 0.0, 0.0); //refraction color for beer's law, put (0,0,0) if no color
+
 
 bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
 {
@@ -38,8 +40,8 @@ bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
         rec))
     {
         hit = true;
-        rec.material = createDiffuseMaterial(vec3(0.2, 0.95, 0.1));
-        //rec.material = createDiffuseMaterial(vec3(0.4, 0.2, 0.1));
+        //rec.material = createDiffuseMaterial(vec3(0.2, 0.95, 0.1));
+        rec.material = createDiffuseMaterial(vec3(0.4, 0.2, 0.1));
     }
 
     if(hit_sphere(
@@ -76,12 +78,11 @@ if(hit_sphere(
         rec))
     {
         hit = true;
-        if(FUZZY_REFRACTION){
+       if(FUZZY_REFRACTION){
             rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, refractionRoughness);
         } else {
             rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, 0.0);
         }
-
     }
    
     int numxy = 5;
@@ -169,9 +170,8 @@ if(hit_sphere(
                     {
                         hit = true;
                         rec.material.type = MT_DIALECTRIC;
-
                         if(FUZZY_REFRACTION){
-                            rec.material = createDialectricMaterial(hash3(seed) , 1.2, 0.0, refractionRoughness);
+                            rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, refractionRoughness);
                         } else {
                             rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, 0.0);
                         }
@@ -189,36 +189,51 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
     float shininess;
     HitRecord dummy;
 
-    vec3 L = (pl.pos - rec.pos);
+    vec3 L = normalize(pl.pos - rec.pos);
     vec3  N  = normalize(rec.normal);
+    float intensity = (dot(L, N));
+    float diffuse, specular;
 
-    if(dot(L, N) > 0.0){
+    if(intensity > 0.0){
 
-        Ray newray = createRay(rec.pos + N * epsilon, L);
+        Ray newray = createRay(rec.pos + epsilon * N, L);
 
-        float distance = length(newray.d); 
-        normalize(newray.d);
+        float distance = length(pl.pos - rec.pos); 
 
         if(hit_world(newray, 0.0, distance, dummy)) {
             return colorOut;
         }
+        if(rec.material.type == MT_DIFFUSE) {
+            specCol = rec.material.specColor;
+            diffCol = rec.material.albedo;
+            //shininess = 10.0;
+            shininess = 4.0 / (pow(rec.material.roughness, 4.0) +epsilon) -2.0;
 
-        L = normalize(L);
-        
-        // attenuation coefficient to calculate the color having in count the number of lights
-		float K1 = 1.25;
-		float Katt = 1.0 / (K1 * 3.0);
-        
+            diffuse = 1.0;
+            specular = 0.0;
+        } if(rec.material.type == MT_METAL) {
+            specCol = rec.material.specColor;
+            diffCol = rec.material.albedo;
+            shininess = 200.0;
+
+            diffuse = 0.0;
+            specular = 1.0;
+        } if(rec.material.type == MT_DIALECTRIC)  { 
+            specCol = rec.material.specColor;
+            diffCol = rec.material.albedo;
+            shininess = 500.0;
+
+            diffuse = 0.0;
+            specular = 1.0;
+        }
         //por sempre 0.0 p n dar erro
         vec3 H =  normalize(L - r.d); // H = Vn (our light) - V
 		diffCol = (pl.color  * diffCol) * (max(0.0, dot(N, L))); //c = cluz * kdiff * n * L
-		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess) * Katt; //c = cluz * kspec * (H * N) ^ shine
+		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess); //* Katt; //c = cluz * kspec * (H * N) ^ shine
 
-		colorOut += diffCol * rec.material.albedo + specCol * rec.material.specColor;
+        colorOut = diffCol * diffuse + specCol * specular;
 
     }
-
-
     
 	return colorOut; 
 }
@@ -244,7 +259,6 @@ vec3 rayColor(Ray r)
                 col += directlighting(pl1, r, rec) * throughput;
                 col += directlighting(pl2, r, rec) * throughput;
                 col += directlighting(pl3, r, rec) * throughput;
-
                 
             }
            
