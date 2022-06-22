@@ -204,25 +204,22 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
             return colorOut;
         }
         if(rec.material.type == MT_DIFFUSE) {
-            specCol = rec.material.specColor;
             diffCol = rec.material.albedo;
+            specCol = rec.material.specColor;
             //shininess = 10.0;
             shininess = 4.0 / (pow(rec.material.roughness, 4.0) +epsilon) -2.0;
-
             diffuse = 1.0;
             specular = 0.0;
         } if(rec.material.type == MT_METAL) {
-            specCol = rec.material.specColor;
             diffCol = rec.material.albedo;
+            specCol = rec.material.specColor;
             shininess = 200.0;
-
             diffuse = 0.0;
             specular = 1.0;
         } if(rec.material.type == MT_DIALECTRIC)  { 
-            specCol = rec.material.specColor;
             diffCol = rec.material.albedo;
+            specCol = rec.material.specColor;
             shininess = 500.0;
-
             diffuse = 0.0;
             specular = 1.0;
         }
