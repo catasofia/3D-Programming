@@ -9,24 +9,24 @@
 
 bool DEPTH_OF_FIELD = false;
 bool FUZZY_REFRACTION = false;
+bool FUZZY_REFLECTION = false;
 
-float refractionRoughness = 0.2; //roughness for fuzzy refraction
-
-vec3 beerslaw = vec3(0.0, 0.0, 0.0); //refraction color for beer's law, put (0,0,0) if no color
+float refractionRoughness = 0.2; //roughness for fuzzy refraction -> dieletric material (extra work)
+float reflectionRoughness = 0.3; //rougness for fuzzy reflection -> metal material
 
 
 bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
 {
     bool hit = false;
     rec.t = tmax;
-   
-    if(hit_triangle(createTriangle(vec3(-10.0, -0.01, 10.0), vec3(10.0, -0.01, 10.0), vec3(-10.0, -0.01, -10.0)), r, tmin, rec.t, rec))
+
+    if(hit_triangle(createTriangle(vec3(-10.0, -0.05, 10.0), vec3(10.0, -0.05, 10.0), vec3(-10.0, -0.05, -10.0)), r, tmin, rec.t, rec))
     {
         hit = true;
         rec.material = createDiffuseMaterial(vec3(0.2));
     }
 
-    if(hit_triangle(createTriangle(vec3(-10.0, -0.01, -10.0), vec3(10.0, -0.01, 10), vec3(10.0, -0.01, -10.0)), r, tmin, rec.t, rec))
+    if(hit_triangle(createTriangle(vec3(-10.0, -0.05, -10.0), vec3(10.0, -0.05, 10), vec3(10.0, -0.05, -10.0)), r, tmin, rec.t, rec))
     {
         hit = true;
         rec.material = createDiffuseMaterial(vec3(0.2));
@@ -40,8 +40,8 @@ bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
         rec))
     {
         hit = true;
-        //rec.material = createDiffuseMaterial(vec3(0.2, 0.95, 0.1));
-        rec.material = createDiffuseMaterial(vec3(0.4, 0.2, 0.1));
+        rec.material = createDiffuseMaterial(vec3(0.2, 0.95, 0.1));
+        //rec.material = createDiffuseMaterial(vec3(0.4, 0.2, 0.1));
     }
 
     if(hit_sphere(
@@ -52,11 +52,15 @@ bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
         rec))
     {
         hit = true;
-        rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
+        if(FUZZY_REFLECTION){
+            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), reflectionRoughness);
+        } else{
+            rec.material = createMetalMaterial(vec3(0.7, 0.6, 0.5), 0.0);
+        }
     }
 
     if(hit_sphere(
-        createSphere(vec3(0.0, 1.0, 0.0), 1.0),
+        createSphere(vec3(-1.5, 1.0, 0.0), 1.0),
         r,
         tmin,
         rec.t,
@@ -64,27 +68,44 @@ bool hit_world(Ray r, float tmin, float tmax, out HitRecord rec)
     {
         hit = true;
         if(FUZZY_REFRACTION){
-            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, refractionRoughness);
-        } else {
-            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, 0.0);
+            rec.material = createDialectricMaterial(vec3(0.0), 1.3, 0.0, refractionRoughness);
+        } else{
+            rec.material = createDialectricMaterial(vec3(0.0), 1.3, 0.0, 0.0);
         }
+        
     }
 
 if(hit_sphere(
-        createSphere(vec3(0.0, 1.0, 0.0), -0.95),
+        createSphere(vec3(-1.5, 1.0, 0.0), -0.55),
         r,
         tmin,
         rec.t,
         rec))
     {
         hit = true;
-       if(FUZZY_REFRACTION){
-            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, refractionRoughness);
-        } else {
-            rec.material = createDialectricMaterial(beerslaw, 1.333, 0.0, 0.0);
+        if(FUZZY_REFRACTION){
+            rec.material = createDialectricMaterial(vec3(0.0), 1.3, 0.0, refractionRoughness);
+        } else{
+            rec.material = createDialectricMaterial(vec3(0.0), 1.3, 0.0, 0.0);
+        }
+    }
+
+    if(hit_sphere(
+        createSphere(vec3(1.5, 1.0, 0.0), 1.0),
+        r,
+        tmin,
+        rec.t,
+        rec))
+    {
+        hit = true;
+        if(FUZZY_REFRACTION){
+            rec.material = createDialectricMaterial(vec3(0.0, 0.7, 0.9), 1.05, 0.0, refractionRoughness);
+        } else{
+            rec.material = createDialectricMaterial(vec3(0.0, 0.7, 0.9), 1.05, 0.0, 0.0);
         }
     }
    
+
     int numxy = 5;
     
     for(int x = -numxy; x < numxy; ++x)
@@ -170,11 +191,7 @@ if(hit_sphere(
                     {
                         hit = true;
                         rec.material.type = MT_DIALECTRIC;
-                        if(FUZZY_REFRACTION){
-                            rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, refractionRoughness);
-                        } else {
-                            rec.material = createDialectricMaterial(hash3(seed), 1.2, 0.0, 0.0);
-                        }
+                        rec.material = createDialectricMaterial(hash3(seed), 1.5, 0.0, 0.0);
                     }
                 }
             }
@@ -206,8 +223,7 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
         if(rec.material.type == MT_DIFFUSE) {
             diffCol = rec.material.albedo;
             specCol = rec.material.specColor;
-            //shininess = 10.0;
-            shininess = 4.0 / (pow(rec.material.roughness, 4.0) +epsilon) -2.0;
+            shininess = 4.0 / (pow(rec.material.roughness, 4.0) + epsilon) -2.0;
             diffuse = 1.0;
             specular = 0.0;
         } if(rec.material.type == MT_METAL) {
@@ -223,10 +239,10 @@ vec3 directlighting(pointLight pl, Ray r, HitRecord rec){
             diffuse = 0.0;
             specular = 1.0;
         }
-        //por sempre 0.0 p n dar erro
+       
         vec3 H =  normalize(L - r.d); // H = Vn (our light) - V
 		diffCol = (pl.color  * diffCol) * (max(0.0, dot(N, L))); //c = cluz * kdiff * n * L
-		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess); //* Katt; //c = cluz * kspec * (H * N) ^ shine
+		specCol = (pl.color * specCol) * pow(max(0.0, dot(H, N)), shininess); //c = cluz * kspec * (H * N) ^ shine
 
         colorOut = diffCol * diffuse + specCol * specular;
 
@@ -296,7 +312,7 @@ void main()
     float distToFocus;
     if(DEPTH_OF_FIELD){
         aperture = 15.0;
-        distToFocus = 0.5;
+        distToFocus = 1.0;
     }
     else{
         aperture = 0.0;

@@ -137,6 +137,7 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
     vec2 ls = cam.lensRadius * randomInUnitDisk(gSeed);  //ls - lens sample for DOF
     float time = cam.time0 + hash1(gSeed) * (cam.time1 - cam.time0);
 
+    // Powerpoint Distribution Ray-Tracing, Slide 39
     vec3 eye_offset;
     vec3 ray_dir; 
 
@@ -149,10 +150,12 @@ Ray getRay(Camera cam, vec2 pixel_sample)  //rnd pixel_sample viewport coordinat
 
     p.x = ps.x * cam.focusDist;
     p.y = ps.y * cam.focusDist;
+    
+    //d = normalize((px - lsx)u + (py - lsy)v - fz
+    ray_dir = (cam.u * (p.x - ls.x) + cam.v * (p.y - ls.y) + cam.n * cam.focusDist * -cam.planeDist);
    
-   ray_dir = (cam.u * (p.x - ls.x) + cam.v * (p.y - ls.y) + cam.n * cam.focusDist * -cam.planeDist);
-   
-   eye_offset = cam.eye + (cam.u * ls.x) + (cam.v * ls.y);
+    //eye_offset = eye + lsx * u + lsy * v
+    eye_offset = cam.eye + (cam.u * ls.x) + (cam.v * ls.y);
 
 
     return createRay(eye_offset, normalize(ray_dir), time);
@@ -224,6 +227,7 @@ struct HitRecord
 
 float schlick(float cosine, float ior_1, float ior_t)
 {
+    // Powerpoint -> Whitted Ray - tracing: Practice, slide 50 
     float R0_aux = (ior_1 - ior_t) / (ior_1 + ior_t);
     float R0 = pow(R0_aux, 2.0);
     
@@ -242,7 +246,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         // pointing from the ray position to S
         vec3 rayDirection = normalize(S - rec.pos);
         
-        //creates ray from the hit point with the new direction
+        // creates ray from the hit point with the new direction
         rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
         
         atten = rec.material.albedo * max(dot(rScattered.d, rec.normal), 0.0) / pi;
@@ -255,7 +259,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         vec3 rayDirection = rIn.d - 2.0 * rec.normal * dot(rIn.d, rec.normal);
         rayDirection = normalize(rayDirection + randomInUnitSphere(gSeed) * rec.material.roughness);
 
-        //creates ray from the hit point with the new direction
+        // creates ray from the hit point with the new direction
         rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
         
         atten = rec.material.specColor;
@@ -275,10 +279,10 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             outwardNormal = -rec.normal;
             niOverNt = rec.material.refIdx;
             cosine = dot(rIn.d, rec.normal);
-             // contrario do outside
            
             ior_1 = rec.material.refIdx;
             ior_t = 1.0;
+
             atten = exp(-rec.material.refractColor * rec.t);  //beer's law
         }
         else  //hit from outside
@@ -305,10 +309,13 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
         }
 
         if( hash1(gSeed) < reflectProb) { //Reflection
+
+            // reflection vector = 2(L*n)n - L
             vec3 rayDirection = normalize(rIn.d - 2.0 * outwardNormal * dot(rIn.d, outwardNormal)); 
-            
+            // takes into account roughness to create the new direction
             rayDirection = normalize(rayDirection + randomInUnitSphere(gSeed) * rec.material.roughness);
             
+            // creates ray from the hit point with the new direction
             rScattered = createRay(rec.pos + rec.normal * epsilon, rayDirection, rIn.t);
 
             //atten *= vec3(reflectProb); not necessary since we are only scattering reflectProb rays and not all reflected rays
@@ -320,6 +327,7 @@ bool scatter(Ray rIn, HitRecord rec, out vec3 atten, out Ray rScattered)
             //https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/
             rayDirection = normalize(mix(rayDirection, normalize(outwardNormal + randomInUnitSphere(gSeed)), rec.material.refractionRoughness * rec.material.refractionRoughness));
              
+            // creates ray from the hit point with the new direction
             rScattered = createRay(rec.pos - outwardNormal * epsilon, rayDirection, rIn.t);
             //atten *= vec3(1.0 - reflectProb); not necessary since we are only scattering 1-reflectProb rays and not all refracted rays
         }
@@ -340,6 +348,7 @@ Triangle createTriangle(vec3 v0, vec3 v1, vec3 v2)
 
 bool hit_triangle(Triangle t, Ray r, float tmin, float tmax, out HitRecord rec)
 {
+    // https://www.youtube.com/watch?v=fK1RPmF_zjQ 
     vec3 vert0 = t.a; 
     vec3 vert1 = t.b;
     vec3 vert2 = t.c;
@@ -434,26 +443,26 @@ vec3 center(MovingSphere mvsphere, float time)
 
 bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    vec3 OC = s.center - r.o;
+    vec3 OC = s.center - r.o; // center of sphere - origin of ray
     
-    float b = dot(OC, r.d);
-    float c = dot(OC, OC) - s.radius * s.radius;
+    float b = dot(OC, r.d); // d * OC
+    float c = dot(OC, OC) - s.radius * s.radius; //OC * OC - r^2
     float t = 0.0;
 	
-    if(c > 0.0) {
-        if (b <= 0.0){
+    if(c > 0.0) { // ray origin is outside
+        if (b <= 0.0){ // sphere is behind of the ray and return false
             return false;
         }
     }
 
-    float discriminant = b * b - c;
-    if (discriminant <= 0.0){
+    float discriminant = b * b - c; // discriminant = b ^ 2 - c
+    if (discriminant <= 0.0){ // if discriminant is less or equal to zero, there is no hit
         return false;
     }
 
-    if(c > 0.0){
+    if(c > 0.0){ // if origin of ray is outside, compute the smallest root
         t = b - sqrt(discriminant);
-    } else{
+    } else { // if origin of ray is inside, compute the positive root
         t = b + sqrt(discriminant);
     }
 
@@ -473,26 +482,26 @@ bool hit_sphere(Sphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 
 bool hit_movingSphere(MovingSphere s, Ray r, float tmin, float tmax, out HitRecord rec)
 {
-    vec3 OC = center(s, r.t) - r.o;
+    vec3 OC = center(s, r.t) - r.o; // center of sphere - origin of ray
     
-    float b = dot(OC, r.d);
-    float c = dot(OC, OC) - s.radius * s.radius;
+    float b = dot(OC, r.d); // d * OC
+    float c = dot(OC, OC) - s.radius * s.radius; //OC * OC - r^2
     float t = 0.0;
 	
-    if(c > 0.0) {
-        if (b <= 0.0){
+    if(c > 0.0) { // ray origin is outside
+        if (b <= 0.0){ // sphere is behind of the ray and return false
             return false;
         }
     }
 
-    float discriminant = b * b - c;
-    if (discriminant <= 0.0){
+    float discriminant = b * b - c; // discriminant = b ^ 2 - c
+    if (discriminant <= 0.0){ // if discriminant is less or equal to zero, there is no hit
         return false;
     }
 
-    if(c > 0.0){
+    if(c > 0.0){ // if origin of ray is outside, compute the smallest root
         t = b - sqrt(discriminant);
-    } else{
+    } else { // if origin of ray is inside, compute the positive root
         t = b + sqrt(discriminant);
     }
 
