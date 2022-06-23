@@ -7,9 +7,9 @@
  #include "./common.glsl"
  #iChannel0 "self"
 
-bool DEPTH_OF_FIELD = false;
-bool FUZZY_REFRACTION = false;
-bool FUZZY_REFLECTION = false;
+bool DEPTH_OF_FIELD = true;
+bool FUZZY_REFRACTION = true;
+bool FUZZY_REFLECTION = true;
 
 float refractionRoughness = 0.2; //roughness for fuzzy refraction -> dieletric material (extra work)
 float reflectionRoughness = 0.3; //rougness for fuzzy reflection -> metal material
