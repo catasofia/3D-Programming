@@ -13,4 +13,4 @@
 | Solution          | Grade 			   	|
 | :-----------------| :-------------: |
 |   [Assignment 1](https://github.com/catasofia/3D-Programming/tree/main/Assignment_1) |  19.00 / *20.00*  |
-|   [Assignment 2](https://github.com/catasofia/3D-Programming/tree/main/Assignment_2) |  -- / *20.00*  |
+|   [Assignment 2](https://github.com/catasofia/3D-Programming/tree/main/Assignment_2) |  18.60 / *20.00*  |
